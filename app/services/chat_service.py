@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from app.core.database import db as kyzs_sql
+from app.config import settings
 
 def stream_chat_handler(message: str):
     """
@@ -10,13 +11,13 @@ def stream_chat_handler(message: str):
     :param message: 用户的问题
     :return: 流式响应的生成器
     """
-    llm_ip = "http://localhost:3001"
-    anythingLLMWorkSpace = "kyzs"
+    llm_ip = settings.anythingllm_base_url
+    anythingLLMWorkSpace = settings.anythingllm_workspace
     thread_id = "identifier-to-partition-chats-by-external-id"
-    anythingLLMKey = "Bearer DKNAE05-JDBMAEN-M2R3BA5-CETY1F2"
-    
+    anythingLLMKey = f"Bearer {settings.anythingllm_api_key}"
+
     llm_url = llm_ip + f"/api/v1/workspace/{anythingLLMWorkSpace}/stream-chat"
-    
+
     headers = {
         "Authorization": anythingLLMKey
     }
@@ -129,11 +130,11 @@ def delete_anything_db_api(id: int):
     text_location = result[0]['text_location']
 
     def delete_text_from_anythingllm(text_location: str):
-        llm_ip = "http://localhost:3001"
-        document_url = llm_ip + f"/api/v1/workspace/kyzs/update-embeddings"
+        llm_ip = settings.anythingllm_base_url
+        document_url = llm_ip + f"/api/v1/workspace/{settings.anythingllm_workspace}/update-embeddings"
         headers = {
             "accept": "application/json",
-            "Authorization": "Bearer DKNAE05-JDBMAEN-M2R3BA5-CETY1F2",
+            "Authorization": f"Bearer {settings.anythingllm_api_key}",
             "Content-Type": "application/json"
         }
         
@@ -170,11 +171,11 @@ def delete_anything_knowledge_by_knowledgeId_api(id:int):
     sql = f"DELETE FROM anything_db WHERE id = {anything_id}"
     kyzs_sql.mysql_exec(sql)
     
-    llm_ip = "http://localhost:3001"
-    document_url = llm_ip + f"/api/v1/workspace/kyzs/update-embeddings"
+    llm_ip = settings.anythingllm_base_url
+    document_url = llm_ip + f"/api/v1/workspace/{settings.anythingllm_workspace}/update-embeddings"
     headers = {
         "accept": "application/json",
-        "Authorization": "Bearer DKNAE05-JDBMAEN-M2R3BA5-CETY1F2",
+        "Authorization": f"Bearer {settings.anythingllm_api_key}",
         "Content-Type": "application/json"
     }
     
@@ -208,12 +209,12 @@ def all_text_to_db(user_id: int,knowledge_id: int,folder_id: int):
 
         def write_text_to_anythingllm(text_title: str,text: str):
             try:
-                llm_ip = "http://localhost:3001"
+                llm_ip = settings.anythingllm_base_url
                 document_url = llm_ip + f"/api/v1/document/raw-text"
-                
+
                 headers = {
                     "accept": "application/json",
-                    "Authorization": "Bearer DKNAE05-JDBMAEN-M2R3BA5-CETY1F2",
+                    "Authorization": f"Bearer {settings.anythingllm_api_key}",
                     "Content-Type": "application/json"
                 }
                 
@@ -273,11 +274,11 @@ def all_text_to_db(user_id: int,knowledge_id: int,folder_id: int):
             print(f"未获取到有效的文档信息，无法记录映射关系")
 
         def embed_document_to_anythingllm(location: str):
-            llm_ip = "http://localhost:3001"
-            document_url = llm_ip + f"/api/v1/workspace/kyzs/update-embeddings"
+            llm_ip = settings.anythingllm_base_url
+            document_url = llm_ip + f"/api/v1/workspace/{settings.anythingllm_workspace}/update-embeddings"
             headers = {
                 "accept": "application/json",
-                "Authorization": "Bearer DKNAE05-JDBMAEN-M2R3BA5-CETY1F2",
+                "Authorization": f"Bearer {settings.anythingllm_api_key}",
                 "Content-Type": "application/json"
             }
             

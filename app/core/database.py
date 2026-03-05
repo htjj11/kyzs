@@ -1,5 +1,5 @@
 import pymysql
-from app.config import sql_ip, sql_port, sql_user, sql_password, sql_database
+from app.config import settings
 
 
 class MysqlClient:
@@ -34,4 +34,10 @@ class MysqlClient:
         return result
 
 
-db = MysqlClient(sql_ip, sql_port, sql_user, sql_password, sql_database)
+db = MysqlClient(
+    settings.sql_ip,
+    settings.sql_port,
+    settings.sql_user,
+    settings.sql_password,
+    settings.sql_database,
+)

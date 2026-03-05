@@ -4,6 +4,7 @@ import json
 import uuid
 from fastapi import APIRouter, Request, Body
 from fastapi.responses import StreamingResponse
+from app.config import settings
 from app.services.chat_service import (
     stream_chat_handler,
     all_text_to_db,
@@ -71,10 +72,10 @@ def simple_chat(
     """
     简单对话接口（非流式，仅用于测试）
     """
-    llm_ip = "http://localhost:3001"
-    anythingLLMWorkSpace = "kyzs"
+    llm_ip = settings.anythingllm_base_url
+    anythingLLMWorkSpace = settings.anythingllm_workspace
     thread_id = "identifier-to-partition-chats-by-external-id"
-    anythingLLMKey = "Bearer DKNAE05-JDBMAEN-M2R3BA5-CETY1F2"
+    anythingLLMKey = f"Bearer {settings.anythingllm_api_key}"
 
     llm_url = llm_ip + f"/api/v1/workspace/{anythingLLMWorkSpace}/thread/{thread_id}/stream-chat"
 

@@ -4,6 +4,7 @@
 
 import requests
 from app.core.database import db as kyzs_sql
+from app.config import settings
 import json
 import datetime
 import os
@@ -175,7 +176,7 @@ def get_online_infomation_api(keyword:str):
             },
 
         }
-        header = {"Authorization": "Bearer fXMOutpFGqmwUoTTSpHz:OTsqdwPkqNmvlKJouKSU"}
+        header = {"Authorization": f"Bearer {settings.xunfei_api_key}"}
         print(f'准备执行请求：{url}，请求头：{header}，请求数据：{data}', flush=True)
         try:
             response = requests.post(url, headers=header, json=data)
@@ -211,7 +212,7 @@ def get_article_from_juhe_api(keywords:list,date:str=None,page=1,size=10,sort=3)
     print('表达式：',params)
     times = "{}".format(int(time.time() * 1000))
     en_params = base64.b64encode(params.encode('utf-8')).decode('utf-8')
-    sign = "{}|{}|{}".format(en_params, "AF85101E523744ADA233DF14CCC76980", times)
+    sign = "{}|{}|{}".format(en_params, settings.juhe_token, times)
     en_sign = md5_encrypt(sign)
     headers = {
         "User-Agent": "test",
@@ -221,7 +222,7 @@ def get_article_from_juhe_api(keywords:list,date:str=None,page=1,size=10,sort=3)
     query_params = {
         "params": en_params,
         "sign": en_sign,
-        "token": "AF85101E523744ADA233DF14CCC76980",
+        "token": settings.juhe_token,
         "times": times
     }
     try:
@@ -475,7 +476,7 @@ def siliconflow_deepseek_answer(question):
         ]
     }
     headers = {
-        "Authorization": "Bearer sk-wmsgbfgsvjxjmyopswmaqfxnwtgmvtwqgsigehxmgwoihgeg",
+        "Authorization": f"Bearer {settings.siliconflow_api_key}",
         "Content-Type": "application/json"
     }
 
