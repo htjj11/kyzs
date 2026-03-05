@@ -1,2 +1,0 @@
-python kyzs.py
-pause
