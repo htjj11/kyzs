@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pymysql
+requests
+pypandoc
+python-docx
+pdf2docx
+docx2pdf
+pypdf
+python-pptx
+beautifulsoup4
