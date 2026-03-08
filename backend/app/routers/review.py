@@ -28,14 +28,10 @@ async def create_review(
     user_id: int = Body(..., embed=True, description="用户id"),
     title: str = Body(..., embed=True, description="报告的主题"),
 ):
-    """
-    创建一个报告
-    """
-    sql_sentence = f"""
-    INSERT INTO `review_records` (title, completion_status, review_body, user_id)
-    VALUES ('{title}', 0, '请从此处开始编辑', {user_id});
-    """
-    res = kyzs_sql.mysql_exec(sql_sentence)
+    res = kyzs_sql.mysql_exec(
+        "INSERT INTO `review_records` (title, completion_status, review_body, user_id) VALUES (%s, 0, '请从此处开始编辑', %s)",
+        (title, user_id)
+    )
     return {"code": 200, "msg": 'success', "data": res}
 
 
@@ -46,19 +42,14 @@ async def create_review_by_template(
     title: str = Body(..., embed=True, description="报告的主题"),
     template_id: int = Body(..., embed=True, description="绑定的模板id")
 ):
-    """
-    根据模板创建报告
-    """
-    sql_sentence = f"""
-    SELECT * FROM `review_template` WHERE id={template_id};
-    """
-    template_content = kyzs_sql.mysql_exec(sql_sentence)[0]['content']
-
-    sql_sentence = f"""
-    INSERT INTO `review_records` (title, completion_status, review_body, user_id,label_id)
-    VALUES ('{title}', 0, '{template_content}', {user_id},{template_id});
-    """
-    res = kyzs_sql.mysql_exec(sql_sentence)
+    template = kyzs_sql.mysql_exec(
+        "SELECT * FROM `review_template` WHERE id=%s", (template_id,)
+    )
+    template_content = template[0]['content']
+    res = kyzs_sql.mysql_exec(
+        "INSERT INTO `review_records` (title, completion_status, review_body, user_id, label_id) VALUES (%s, 0, %s, %s, %s)",
+        (title, template_content, user_id, template_id)
+    )
     return {"code": 200, "msg": 'success', "data": res}
 
 
@@ -67,13 +58,7 @@ async def delete_review(
     request: Request,
     review_id: int = Body(..., embed=True, description="报告id")
 ):
-    """
-    删除报告
-    """
-    sql_sentence = f"""
-    DELETE FROM `review_records` WHERE id={review_id};  
-    """
-    res = kyzs_sql.mysql_exec(sql_sentence)
+    res = kyzs_sql.mysql_exec("DELETE FROM `review_records` WHERE id=%s", (review_id,))
     return {"code": 200, "msg": 'success', "data": res}
 
 
@@ -82,13 +67,7 @@ async def get_all_review(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    """
-    获取当前用户id下的报告
-    """
-    sql_sentence = f"""
-    SELECT * FROM `review_records` where user_id={user_id}
-    """
-    res = kyzs_sql.mysql_exec(sql_sentence)
+    res = kyzs_sql.mysql_exec("SELECT * FROM `review_records` WHERE user_id=%s", (user_id,))
     return {"code": 200, "msg": 'success', "data": res}
 
 
@@ -97,11 +76,8 @@ async def get_review_detail(
     request: Request,
     review_id: int = Body(..., embed=True, description="报告id")
 ):
-    """
-    获取当前报告id下的base64编码
-    """
-    base64_string = generate_word_api(review_id)
-    return {"code": 200, "msg": 'success', "data": base64_string}
+    result = generate_word_api(review_id)
+    return {"code": 200, "msg": 'success', "data": result}
 
 
 @router.post("/get_review_fuwenben_base64")
@@ -109,11 +85,8 @@ async def get_review_fuwenben_base64(
     request: Request,
     review_id: int = Body(..., embed=True, description="报告id")
 ):
-    """
-    获取当前报告id下的base64编码（富文本）
-    """
-    base64_string = generate_fuwenben_word_api(review_id)
-    return {"code": 200, "msg": 'success', "data": base64_string}
+    result = generate_fuwenben_word_api(review_id)
+    return {"code": 200, "msg": 'success', "data": result}
 
 
 @router.post('/modify_review')
@@ -124,9 +97,6 @@ async def modify_review(
     end_position: int = Body(..., embed=True, description="目标文本结束位置"),
     replaced_text: str = Body(..., embed=True, description="替换文本"),
 ):
-    """
-    修改综述生成记录
-    """
     print(f"用户请求 IP: {request.client.host}，记录id：{review_id}，目标文本起始位置：{start_position}，目标文本结束位置：{end_position}，替换文本：{replaced_text}")
     response = modify_summary_api(review_id, start_position, end_position, replaced_text)
     if response:
@@ -140,9 +110,6 @@ async def modify_review_new(
     review_id: int = Body(..., embed=True, description="记录id"),
     review_body: str = Body(..., embed=True, description="综述正文"),
 ):
-    """
-    修改综述生成记录完成情况（全文替换）
-    """
     print(f"用户请求 IP: {request.client.host}，记录id：{review_id}，综述正文：{review_body}")
     response = modify_review_new_api(review_id, review_body)
     if response:
@@ -157,23 +124,28 @@ async def get_summary_by_ai(
     prompt_ids: list[int] = Body(..., embed=True, description="提示词id列表"),
     user_need: str = Body(..., embed=True, description="用户需求字符串"),
 ):
-    """
-    传入参考知识库id列表,提示词id列表,用户需求字符串，调用大模型生成综述
-    """
-    sql = f"""
-        SELECT content FROM knowledgebase
-        WHERE id IN ({','.join(map(str, knowledge_ids))})
-    """
-    knowledge_content = kyzs_sql.mysql_exec(sql)
-    sql = f"""
-        SELECT text FROM prompt
-        WHERE id IN ({','.join(map(str, prompt_ids))})
-    """
-    prompt_content = kyzs_sql.mysql_exec(sql)
-    knowledge_content = '\n'.join([item['content'] for item in knowledge_content if item.get('content')]) if knowledge_content else ''
-    prompt_content = '\n'.join([item['text'] for item in prompt_content if item.get('text')]) if prompt_content else ''
+    if knowledge_ids:
+        placeholders = ','.join(['%s'] * len(knowledge_ids))
+        knowledge_rows = kyzs_sql.mysql_exec(
+            f"SELECT content FROM knowledgebase WHERE id IN ({placeholders})",
+            tuple(knowledge_ids)
+        )
+    else:
+        knowledge_rows = []
 
-    prompt = f'''    
+    if prompt_ids:
+        placeholders = ','.join(['%s'] * len(prompt_ids))
+        prompt_rows = kyzs_sql.mysql_exec(
+            f"SELECT text FROM prompt WHERE id IN ({placeholders})",
+            tuple(prompt_ids)
+        )
+    else:
+        prompt_rows = []
+
+    knowledge_content = '\n'.join(r['content'] for r in knowledge_rows if r.get('content'))
+    prompt_content = '\n'.join(r['text'] for r in prompt_rows if r.get('text'))
+
+    prompt = f"""    
     知识库内容：
     {knowledge_content}
     格式\内容要求：
@@ -181,15 +153,11 @@ async def get_summary_by_ai(
     用户需求：
     {user_need}
     请你按照需求,直接回复用户,不需要多余的解释
-    '''
+    """
     print(prompt)
-
     summary = await asyncio.get_event_loop().run_in_executor(
-        executor,
-        siliconflow_deepseek_answer,
-        prompt
+        executor, siliconflow_deepseek_answer, prompt
     )
-
     return {"code": 200, "msg": "success", "data": summary}
 
 
@@ -198,11 +166,5 @@ async def get_all_template(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    """
-    获取当前用户id下的报告模板
-    """
-    sql_sentence = f"""
-    SELECT * FROM `review_template` 
-    """
-    res = kyzs_sql.mysql_exec(sql_sentence)
+    res = kyzs_sql.mysql_exec("SELECT * FROM `review_template`")
     return {"code": 200, "msg": 'success', "data": res}

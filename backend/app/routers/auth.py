@@ -19,10 +19,10 @@ async def login_api(
     """
     登录系统
     """
-    sql_sentence = f"""
-    select id from `user` where name='{username}' and passwd='{password}'
-    """
-    user_result = kyzs_sql.mysql_exec(sql_sentence)
+    user_result = kyzs_sql.mysql_exec(
+        "SELECT id FROM `user` WHERE name=%s AND passwd=%s",
+        (username, password)
+    )
     if user_result:
         return {"code": 200, "msg": 'success', "data": {"user_id": user_result[0]['id'], "user_name": username}}
     else:

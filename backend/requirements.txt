@@ -1,6 +1,9 @@
 fastapi
 uvicorn[standard]
 pydantic-settings
+dbutils
+pytest
+httpx
 pymysql
 requests
 pypandoc

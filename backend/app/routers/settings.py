@@ -15,13 +15,7 @@ async def get_all_label(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    """
-    获取当前用户id下的所有标签
-    """
-    sql_sentence = f"""
-    SELECT * FROM `label` where user_id={user_id}
-    """
-    res = kyzs_sql.mysql_exec(sql_sentence)
+    res = kyzs_sql.mysql_exec("SELECT * FROM `label` WHERE user_id=%s", (user_id,))
     return {"code": 200, "msg": 'success', "data": res}
 
 
@@ -30,14 +24,8 @@ async def get_all_prompt(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    """
-    获取当前用户id下的所有提示词
-    """
-    sql_sentence = f"""
-    SELECT * FROM `prompt` where user_id={user_id}  
-    """
-    prompt_result = kyzs_sql.mysql_exec(sql_sentence)
-    return {"code": 200, "msg": 'success', "data": prompt_result}
+    result = kyzs_sql.mysql_exec("SELECT * FROM `prompt` WHERE user_id=%s", (user_id,))
+    return {"code": 200, "msg": 'success', "data": result}
 
 
 @router.post("/add_prompt")
@@ -48,13 +36,10 @@ async def add_prompt(
     text: str = Body(..., embed=True, description="提示词类型id"),
     type: int = Body(..., embed=True, description="提示词内容")
 ):
-    """
-    增加一个提示词
-    """
-    sql_sentence = f"""
-    insert into `prompt` (user_id,name,text,type) values ({user_id},'{name}','{text}',{int(type)})
-    """
-    prompt_result = kyzs_sql.mysql_exec(sql_sentence)
+    prompt_result = kyzs_sql.mysql_exec(
+        "INSERT INTO `prompt` (user_id, name, text, type) VALUES (%s, %s, %s, %s)",
+        (user_id, name, text, int(type))
+    )
     return {"code": 200, "msg": 'success', "data": prompt_result}
 
 
@@ -66,13 +51,10 @@ async def update_prompt(
     type: int = Body(..., embed=True, description="提示词内容"),
     id: int = Body(..., embed=True, description="提示词id")
 ):
-    """
-    更新一个提示词
-    """
-    sql_sentence = f"""
-    update `prompt` set name='{name}',text='{text}',type={int(type)} where id={id}
-    """
-    prompt_result = kyzs_sql.mysql_exec(sql_sentence)
+    prompt_result = kyzs_sql.mysql_exec(
+        "UPDATE `prompt` SET name=%s, text=%s, type=%s WHERE id=%s",
+        (name, text, int(type), id)
+    )
     return {"code": 200, "msg": 'success', "data": prompt_result}
 
 
@@ -81,13 +63,7 @@ async def delete_prompt(
     request: Request,
     id: int = Body(..., embed=True, description="提示词id")
 ):
-    """
-    删除一个提示词
-    """
-    sql_sentence = f"""
-    delete from `prompt` where id={id}
-    """
-    prompt_result = kyzs_sql.mysql_exec(sql_sentence)
+    prompt_result = kyzs_sql.mysql_exec("DELETE FROM `prompt` WHERE id=%s", (id,))
     return {"code": 200, "msg": 'success', "data": prompt_result}
 
 
@@ -96,14 +72,8 @@ async def get_all_prompt_type(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    """
-    获取当前用户id下的所有提示词类型
-    """
-    sql_sentence = f"""
-    SELECT * FROM `prompt_type` where user_id={user_id}
-    """
-    prompt_type_result = kyzs_sql.mysql_exec(sql_sentence)
-    return {"code": 200, "msg": 'success', "data": prompt_type_result}
+    result = kyzs_sql.mysql_exec("SELECT * FROM `prompt_type` WHERE user_id=%s", (user_id,))
+    return {"code": 200, "msg": 'success', "data": result}
 
 
 @router.post("/get_label")
@@ -111,14 +81,8 @@ async def get_label(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id"),
 ):
-    """
-    获取所有label  
-    """
-    sql_sentence = f"""
-    select * from `label` where user_id={user_id}
-    """
-    prompt_type_result = kyzs_sql.mysql_exec(sql_sentence)
-    return {"code": 200, "msg": 'success', "data": prompt_type_result}
+    result = kyzs_sql.mysql_exec("SELECT * FROM `label` WHERE user_id=%s", (user_id,))
+    return {"code": 200, "msg": 'success', "data": result}
 
 
 @router.post("/add_label")
@@ -127,13 +91,10 @@ async def add_label(
     user_id: int = Body(..., embed=True, description="用户id"),
     label_name: str = Body(..., embed=True, description="标签名称"),
 ):
-    """
-    增加一个标签
-    """
-    sql_sentence = f"""
-    insert into `label` (user_id,label_name) values ({user_id},'{label_name}')
-    """
-    label_result = kyzs_sql.mysql_exec(sql_sentence)
+    label_result = kyzs_sql.mysql_exec(
+        "INSERT INTO `label` (user_id, label_name) VALUES (%s, %s)",
+        (user_id, label_name)
+    )
     return {"code": 200, "msg": 'success', "data": label_result}
 
 
@@ -142,11 +103,5 @@ async def delete_label(
     request: Request,
     id: int = Body(..., embed=True, description="标签id")
 ):
-    """
-    删除一个标签
-    """
-    sql_sentence = f"""
-    delete from `label` where id={id}
-    """
-    label_result = kyzs_sql.mysql_exec(sql_sentence)
+    label_result = kyzs_sql.mysql_exec("DELETE FROM `label` WHERE id=%s", (id,))
     return {"code": 200, "msg": 'success', "data": label_result}

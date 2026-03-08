@@ -133,10 +133,10 @@ async def get_article_from_wanfang(
     if response:
         for paper_info in response:
             DOI = paper_info['DOI']
-            sql_sentence = f"""
-            SELECT * FROM `knowledgebase` WHERE user_id={user_id} AND mark_info='{DOI}';
-            """
-            mark_info = kyzs_sql.mysql_exec(sql_sentence)
+            mark_info = kyzs_sql.mysql_exec(
+                "SELECT id FROM `knowledgebase` WHERE user_id=%s AND mark_info=%s",
+                (user_id, DOI)
+            )
             paper_info['is_collected'] = 1 if mark_info else 0
 
         return {"code": 200, "msg": "success", "data": response, "total_count": total_count}
@@ -175,10 +175,10 @@ async def get_patent_from_wanfang(
         print(f'万方检索内容:{response}')
         for paper_info in response:
             patent_id = paper_info['公开号']
-            sql_sentence = f"""
-            SELECT * FROM `knowledgebase` WHERE user_id={user_id} AND mark_info='{patent_id}';
-            """
-            mark_info = kyzs_sql.mysql_exec(sql_sentence)
+            mark_info = kyzs_sql.mysql_exec(
+                "SELECT id FROM `knowledgebase` WHERE user_id=%s AND mark_info=%s",
+                (user_id, patent_id)
+            )
             paper_info['is_collected'] = 1 if mark_info else 0
 
         return {"code": 200, "msg": "success", "data": response, "total_count": total_count}
