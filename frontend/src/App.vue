@@ -48,45 +48,14 @@
                 </template>
                 <div class="submenu-group">
                   <div class="group-label">知识信息检索</div>
-                  <el-sub-menu index="/wxjs" class="menu-sub">
-                    <template #title>
-                      
-                      <span style="margin-left: 17px;">
-                        <el-icon class="submenu-icon"><Document /></el-icon>
-                        文献检索
-                      </span>
-                    </template>
-                    <el-menu-item index="/wxjs" class="menu-item">
-                      <span style="margin-left: 17px;">
-                        <router-link to="/wxjs" class="menu-link">①文献检索（oilink资源）</router-link>
-                      </span>
-                    </el-menu-item>
-                    <el-menu-item index="/wxjsjh" class="menu-item">
-                      <span style="margin-left: 17px;">
-                        <router-link to="/wxjsjh" class="menu-link">②文献检索（聚合）</router-link>
-                      </span>
-                    </el-menu-item>
-                    <el-menu-item index="/wxjs_wanfang" class="menu-item">
-                      <span style="margin-left: 17px;">
-                        <router-link to="/wxjs_wanfang" class="menu-link">③万方文献检索</router-link>
-                      </span>
-                    </el-menu-item>
-                  </el-sub-menu>
-                  <el-sub-menu index="/zljs" class="menu-item">
-                    <template #title>
-                      <span style="margin-left: 17px;"><el-icon><Collection /></el-icon>专利检索</span>
-                    </template>
-                    <el-menu-item index="/zljs">
-                       <span style="margin-left: 17px;">
-                        <router-link to="/zljs" class="menu-link">Oilink专利检索</router-link>
-                       </span>                      
-                    </el-menu-item>
-                    <el-menu-item index="/zljs_wanfang">
-                      <span style="margin-left: 17px;">
-                        <router-link to="/zljs_wanfang" class="menu-link">万方专利检索</router-link>
-                      </span>                      
-                    </el-menu-item>
-                  </el-sub-menu>
+                  <el-menu-item index="/wxjs" class="menu-item">
+                    <el-icon><Document /></el-icon>
+                    <router-link to="/wxjs" class="menu-link">文献检索</router-link>
+                  </el-menu-item>
+                  <el-menu-item index="/zljs" class="menu-item">
+                    <el-icon><Collection /></el-icon>
+                    <router-link to="/zljs" class="menu-link">专利检索</router-link>
+                  </el-menu-item>
                   <el-menu-item index="/wlxxjs" class="menu-item">
                     <el-icon><Connection /></el-icon>
                     <router-link to="/wlxxjs" class="menu-link">网络信息检索</router-link>

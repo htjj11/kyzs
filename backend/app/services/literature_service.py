@@ -60,8 +60,14 @@ def get_patents_from_oillink(query: str, page: int = 0, size: int = 5):
                 (patent_id,)
             )
             i['is_collected'] = 1 if id_result and id_result[0]['cnt'] else 0
-            i['app_date'] = datetime.datetime.fromtimestamp(i['app_date']['seconds'])
-            i['pub_date'] = datetime.datetime.fromtimestamp(i['pub_date']['seconds'])
+            if isinstance(i.get('app_date'), dict) and 'seconds' in i['app_date']:
+                i['app_date'] = datetime.datetime.fromtimestamp(i['app_date']['seconds'])
+            else:
+                i['app_date'] = i.get('app_date', '')
+            if isinstance(i.get('pub_date'), dict) and 'seconds' in i['pub_date']:
+                i['pub_date'] = datetime.datetime.fromtimestamp(i['pub_date']['seconds'])
+            else:
+                i['pub_date'] = i.get('pub_date', '')
             new_data.append(i)
         return new_data
     except requests.RequestException as e:
@@ -150,23 +156,31 @@ def get_article_from_juhe_api(keywords: list, date: str = None, page=1, size=10,
             print(response.text)
             response.raise_for_status()
             result = response.json()['result']
+            records = result.get('records')
+            if not records:
+                print("聚合API返回记录为空")
+                return []
             return [
                 {
                     "标题": r['title'], "关键词": r['keyword'], "年份": r['year'],
                     "摘要": r['content'], "DOI": r['doi'],
                     "下载链接": f"http://61.128.134.70:6655{r['full_source']}"
                 }
-                for r in result['records']
+                for r in records
             ]
     except Exception as e:
         print(f"重庆聚合请求出错: {e}")
         return None
 
 
-def get_article_from_wanfang_api(Datewithin=None, Keywords=[], StartRecord=1, MaximumRecords=10):
+def get_article_from_wanfang_api(start_year=None, end_year=None, Keywords=[], StartRecord=1, MaximumRecords=10):
     exps = list(Keywords)
-    if Datewithin:
-        exps.append(f'Date within "{Datewithin}-01-01 {Datewithin}-12-31"')
+    if start_year and end_year:
+        exps.append(f'Date within "{start_year}-01-01 {end_year}-12-31"')
+    elif start_year:
+        exps.append(f'Date within "{start_year}-01-01 {start_year}-12-31"')
+    elif end_year:
+        exps.append(f'Date within "{end_year}-01-01 {end_year}-12-31"')
     exp = " and ".join(exps)
     print(f"检索表达式：{exp}")
 
@@ -237,10 +251,14 @@ def get_article_from_wanfang_api(Datewithin=None, Keywords=[], StartRecord=1, Ma
     return parse_academic_papers(response)
 
 
-def wangfang_patent(Datewithin=None, patent_name=[], StartRecord=1, MaximumRecords=10):
+def wangfang_patent(start_year=None, end_year=None, patent_name=[], StartRecord=1, MaximumRecords=10):
     exps = list(patent_name)
-    if Datewithin:
-        exps.append(f'F_PublicationDate within "{Datewithin}-01-01 {Datewithin}-12-31"')
+    if start_year and end_year:
+        exps.append(f'F_PublicationDate within "{start_year}-01-01 {end_year}-12-31"')
+    elif start_year:
+        exps.append(f'F_PublicationDate within "{start_year}-01-01 {start_year}-12-31"')
+    elif end_year:
+        exps.append(f'F_PublicationDate within "{end_year}-01-01 {end_year}-12-31"')
     exp = " and ".join(exps)
     # print(f"检索表达式：{exp}")  # 原版注释掉了，保持一致
 

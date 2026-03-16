@@ -6,11 +6,8 @@ import login from "@/login.vue"
 
 // 若 "@/components/wxjs.vue" 解析失败，尝试使用相对路径导入
 // 假设该文件相对于当前文件的路径是 "../components/wxjs.vue"，请根据实际目录结构调整
-import wxjs from "@/components/baogao/1wxjs.vue";
-import wxjsjh from "@/components/baogao/1.2article_juhe.vue";
-import wxjsWanfang from "@/components/baogao/1.3article_wanfang.vue";
-import zljs from "@/components/baogao/2zljs.vue";
-import zljs_wanfang from "@/components/baogao/2.1zljs_wanfnag.vue";
+import literatureSearch from "@/components/baogao/literature_search.vue";
+import patentSearch from "@/components/baogao/patent_search.vue";
 import wlxxjs from "@/components/baogao/3wlxxjs.vue";
 import zlsc from "@/components/baogao/4zlsc.vue";
 import zskck from "@/components/baogao/5zskck.vue";
@@ -49,37 +46,18 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/wxjs' // 默认重定向到文献检索页面
+      redirect: '/wxjs'
     },
-    {      
-      path: '/wxjsjh',
-      name: 'wxjsjh',
-      component: wxjsjh,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/wxjs_wanfang',
-      name: 'wxjs_wanfang',
-      component: wxjsWanfang,
-      meta: { requiresAuth: true }
-    },
-
     {
       path: '/wxjs',
       name: 'wxjs',
-      component: wxjs,
+      component: literatureSearch,
       meta: { requiresAuth: true }
     },
     {
       path: '/zljs',
       name: 'zljs',
-      component: zljs,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/zljs_wanfang',
-      name: 'zljs_wanfang',
-      component: zljs_wanfang,
+      component: patentSearch,
       meta: { requiresAuth: true }
     },
     {
