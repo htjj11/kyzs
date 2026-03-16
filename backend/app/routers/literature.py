@@ -384,12 +384,12 @@ async def search_all_articles(
     start_year: int = Body(None, embed=True, description="起始年份"),
     end_year: int = Body(None, embed=True, description="结束年份"),
     page: int = Body(1, embed=True, description="页码（从1开始）"),
-    size: int = Body(50, embed=True, description="每个数据源每页条数"),
+    size: int = Body(20, embed=True, description="每页总条数"),
     user_id: int = Body(1, embed=True, description="用户id"),
 ):
     """
-    聚合文献检索：并发查询 OilLink / 聚合 / 万方，归一化后合并返回。
-    三个源各取 size 条，全部合并展示。
+    聚合文献检索：并发查询 OilLink / 聚合 / 万方，归一化后交叉合并返回 size 条。
+    向每个源各请求 size 条，交叉合并后取前 size 条，保证来源均匀分布。
     """
     kw_list = [k.strip() for k in keywords.split(',') if k.strip()]
     print(f"\033[32m聚合文献检索: keywords={kw_list}, year={start_year}-{end_year}, page={page}\033[0m")
@@ -449,12 +449,19 @@ async def search_all_articles(
         loop.run_in_executor(executor, _fetch_juhe),
         loop.run_in_executor(executor, _fetch_wanfang),
     )
-    merged = list(oilink_res) + list(juhe_res) + list(wanfang_res)
-    print(f"聚合文献结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}")
-    return {
-        "code": 200, "msg": "success", "data": merged,
-        "counts": {"oilink": len(oilink_res), "juhe": len(juhe_res), "wanfang": len(wanfang_res)},
-    }
+
+    # 交叉合并：轮流从各源取一条，保证来源均匀分布
+    sources = [list(oilink_res), list(juhe_res), list(wanfang_res)]
+    merged = []
+    max_len = max((len(s) for s in sources), default=0)
+    for i in range(max_len):
+        for src in sources:
+            if i < len(src):
+                merged.append(src[i])
+    result = merged[:size]
+
+    print(f"聚合文献结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
+    return {"code": 200, "msg": "success", "data": result}
 
 
 @router.post('/search_all_patents')
@@ -464,12 +471,12 @@ async def search_all_patents(
     start_year: int = Body(None, embed=True, description="起始年份"),
     end_year: int = Body(None, embed=True, description="结束年份"),
     page: int = Body(1, embed=True, description="页码（从1开始）"),
-    size: int = Body(50, embed=True, description="每个数据源每页条数"),
+    size: int = Body(20, embed=True, description="每页总条数"),
     user_id: int = Body(1, embed=True, description="用户id"),
 ):
     """
-    聚合专利检索：并发查询 OilLink + 万方，归一化后合并返回。
-    两个源各取 size 条，全部合并展示。
+    聚合专利检索：并发查询 OilLink + 万方，归一化后交叉合并返回 size 条。
+    向每个源各请求 size 条，交叉合并后取前 size 条。
     """
     kw_list = [k.strip() for k in keywords.split(',') if k.strip()]
     kw_str = ' '.join(kw_list)
@@ -516,9 +523,16 @@ async def search_all_patents(
         loop.run_in_executor(executor, _fetch_oilink),
         loop.run_in_executor(executor, _fetch_wanfang),
     )
-    merged = list(oilink_res) + list(wanfang_res)
-    print(f"聚合专利结果: OilLink={len(oilink_res)}, 万方={len(wanfang_res)}")
-    return {
-        "code": 200, "msg": "success", "data": merged,
-        "counts": {"oilink": len(oilink_res), "wanfang": len(wanfang_res)},
-    }
+
+    # 交叉合并
+    sources = [list(oilink_res), list(wanfang_res)]
+    merged = []
+    max_len = max((len(s) for s in sources), default=0)
+    for i in range(max_len):
+        for src in sources:
+            if i < len(src):
+                merged.append(src[i])
+    result = merged[:size]
+
+    print(f"聚合专利结果: OilLink={len(oilink_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
+    return {"code": 200, "msg": "success", "data": result}

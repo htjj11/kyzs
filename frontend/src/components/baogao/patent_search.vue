@@ -5,7 +5,7 @@
       <div class="form-row">
         <div class="form-item">
           <label>关键词：</label>
-          <el-input v-model="keywords" placeholder="多个关键词用逗号分隔" style="width:300px" clearable @keyup.enter="search" />
+          <el-input v-model="keywords" placeholder="多个关键词用逗号分隔" style="width:300px" clearable @keyup.enter="doSearch" />
         </div>
         <div class="form-item">
           <label>年份：</label>
@@ -14,15 +14,9 @@
           <el-input-number v-model="endYear" :min="1800" :max="currentYear" placeholder="结束" controls-position="right" style="width:120px" />
         </div>
         <div class="form-actions">
-          <el-button type="primary" :loading="loading" @click="search">搜索</el-button>
+          <el-button type="primary" :loading="loading" @click="doSearch">搜索</el-button>
         </div>
       </div>
-    </div>
-
-    <div class="results-stats" v-if="!loading && list.length > 0">
-      共 {{ list.length }} 条结果
-      <el-tag size="small" style="margin-left:8px">OilLink: {{ counts.oilink }}</el-tag>
-      <el-tag size="small" type="warning" style="margin-left:4px">万方: {{ counts.wanfang }}</el-tag>
     </div>
 
     <div class="data-section">
@@ -49,11 +43,19 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-if="!loading && searched && list.length === 0" description="暂无相关专利" />
-      <div class="pagination-box" v-if="list.length > 0">
-        <el-button :disabled="page <= 1" size="small" @click="page--; search()">上一页</el-button>
+      <el-empty v-if="!loading && searched && list.length === 0 && page === 1" description="暂无相关专利" />
+
+      <div class="pagination-box" v-if="searched">
+        <el-button :disabled="page <= 1" size="small" @click="page--; fetchData()">上一页</el-button>
         <span class="page-info">第 {{ page }} 页</span>
-        <el-button size="small" @click="page++; search()">下一页</el-button>
+        <el-button :disabled="list.length === 0" size="small" @click="page++; fetchData()">下一页</el-button>
+        <span class="page-sep">|</span>
+        <span class="page-label">每页</span>
+        <el-select v-model="pageSize" size="small" style="width:90px" @change="onPageSizeChange">
+          <el-option :value="10" label="10 条" />
+          <el-option :value="20" label="20 条" />
+          <el-option :value="50" label="50 条" />
+        </el-select>
       </div>
     </div>
 
@@ -83,15 +85,21 @@ const currentYear = new Date().getFullYear()
 const keywords = ref('')
 const startYear = ref(null)
 const endYear = ref(null)
-const page = ref(1)
 const loading = ref(false)
 const searched = ref(false)
+
 const list = ref([])
-const counts = ref({ oilink: 0, wanfang: 0 })
+const page = ref(1)
+const pageSize = ref(20)
 
 // =================== 搜索 ===================
-const search = async () => {
+const doSearch = () => {
   if (!keywords.value.trim()) { ElMessage.warning('请输入搜索关键词'); return }
+  page.value = 1
+  fetchData()
+}
+
+const fetchData = async () => {
   loading.value = true
   searched.value = true
   try {
@@ -100,16 +108,21 @@ const search = async () => {
       start_year: startYear.value || null,
       end_year: endYear.value || null,
       page: page.value,
+      size: pageSize.value,
       user_id: getUserIdFromCookie() || 1,
     })
     if (resp.data.code === 200) {
       list.value = resp.data.data || []
-      counts.value = resp.data.counts || { oilink: 0, wanfang: 0 }
     } else {
       ElMessage.error(resp.data.msg || '搜索失败')
     }
   } catch { ElMessage.error('网络错误') }
   finally { loading.value = false }
+}
+
+const onPageSizeChange = () => {
+  page.value = 1
+  fetchData()
 }
 
 // =================== 详情弹窗 ===================
@@ -186,12 +199,13 @@ const handleLabelConfirm = async ({ label_id }) => {
 .form-item label { font-weight: 500; color: #606266; white-space: nowrap; }
 .form-actions { margin-left: auto; display: flex; gap: 8px; }
 .year-sep { margin: 0 4px; color: #999; }
-.results-stats { margin-bottom: 12px; font-size: 14px; color: #606266; }
 .data-section { background: #fff; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-.pagination-box { margin-top: 16px; display: flex; justify-content: center; align-items: center; gap: 12px; }
-.page-info { font-size: 14px; color: #606266; }
 .collected-text { color: #67c23a; font-size: 13px; }
 .title-link { color: #409eff; cursor: pointer; }
+.pagination-box { display: flex; align-items: center; gap: 12px; margin-top: 16px; justify-content: center; }
+.page-info { font-size: 14px; color: #606266; min-width: 60px; text-align: center; }
+.page-sep { color: #ddd; }
+.page-label { font-size: 13px; color: #909399; }
 .patent-detail { max-height: 70vh; overflow-y: auto; }
 .detail-row { display: flex; margin-bottom: 14px; }
 .detail-label { width: 110px; font-weight: bold; color: #606266; flex-shrink: 0; }
