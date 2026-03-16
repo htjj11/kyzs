@@ -450,14 +450,8 @@ async def search_all_articles(
         loop.run_in_executor(executor, _fetch_wanfang),
     )
 
-    # 交叉合并：轮流从各源取一条，保证来源均匀分布
-    sources = [list(oilink_res), list(juhe_res), list(wanfang_res)]
-    merged = []
-    max_len = max((len(s) for s in sources), default=0)
-    for i in range(max_len):
-        for src in sources:
-            if i < len(src):
-                merged.append(src[i])
+    merged = list(oilink_res) + list(juhe_res) + list(wanfang_res)
+    merged.sort(key=lambda x: _extract_year(x.get('year')) or 0, reverse=True)
     result = merged[:size]
 
     print(f"聚合文献结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
@@ -524,14 +518,8 @@ async def search_all_patents(
         loop.run_in_executor(executor, _fetch_wanfang),
     )
 
-    # 交叉合并
-    sources = [list(oilink_res), list(wanfang_res)]
-    merged = []
-    max_len = max((len(s) for s in sources), default=0)
-    for i in range(max_len):
-        for src in sources:
-            if i < len(src):
-                merged.append(src[i])
+    merged = list(oilink_res) + list(wanfang_res)
+    merged.sort(key=lambda x: _extract_year(x.get('app_date')) or 0, reverse=True)
     result = merged[:size]
 
     print(f"聚合专利结果: OilLink={len(oilink_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
