@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+dbutils
+pytest
+httpx
+pymysql
+requests
+pypandoc
+python-docx
+pdf2docx
+docx2pdf
+pypdf
+python-pptx
+beautifulsoup4
