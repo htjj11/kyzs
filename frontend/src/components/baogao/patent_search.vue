@@ -50,7 +50,7 @@
         <span class="page-info">第 {{ page }} 页</span>
         <el-button :disabled="list.length === 0" size="small" @click="page++; fetchData()">下一页</el-button>
         <span class="page-sep">|</span>
-        <span class="page-label">每页</span>
+        <span class="page-label">每源</span>
         <el-select v-model="pageSize" size="small" style="width:90px" @change="onPageSizeChange">
           <el-option :value="10" label="10 条" />
           <el-option :value="20" label="20 条" />

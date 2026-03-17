@@ -384,12 +384,12 @@ async def search_all_articles(
     start_year: int = Body(None, embed=True, description="起始年份"),
     end_year: int = Body(None, embed=True, description="结束年份"),
     page: int = Body(1, embed=True, description="页码（从1开始）"),
-    size: int = Body(20, embed=True, description="每页总条数"),
+    size: int = Body(20, embed=True, description="每个数据源每页条数"),
     user_id: int = Body(1, embed=True, description="用户id"),
 ):
     """
-    聚合文献检索：并发查询 OilLink / 聚合 / 万方，归一化后交叉合并返回 size 条。
-    向每个源各请求 size 条，交叉合并后取前 size 条，保证来源均匀分布。
+    聚合文献检索：并发查询 OilLink / 聚合 / 万方，归一化后按年份降序合并返回。
+    向每个源各请求 size 条，合并后按年份排序全部返回。
     """
     kw_list = [k.strip() for k in keywords.split(',') if k.strip()]
     print(f"\033[32m聚合文献检索: keywords={kw_list}, year={start_year}-{end_year}, page={page}\033[0m")
@@ -452,10 +452,9 @@ async def search_all_articles(
 
     merged = list(oilink_res) + list(juhe_res) + list(wanfang_res)
     merged.sort(key=lambda x: _extract_year(x.get('year')) or 0, reverse=True)
-    result = merged[:size]
 
-    print(f"聚合文献结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
-    return {"code": 200, "msg": "success", "data": result}
+    print(f"聚合文献结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}, 返回={len(merged)}")
+    return {"code": 200, "msg": "success", "data": merged}
 
 
 @router.post('/search_all_patents')
@@ -465,12 +464,12 @@ async def search_all_patents(
     start_year: int = Body(None, embed=True, description="起始年份"),
     end_year: int = Body(None, embed=True, description="结束年份"),
     page: int = Body(1, embed=True, description="页码（从1开始）"),
-    size: int = Body(20, embed=True, description="每页总条数"),
+    size: int = Body(20, embed=True, description="每个数据源每页条数"),
     user_id: int = Body(1, embed=True, description="用户id"),
 ):
     """
-    聚合专利检索：并发查询 OilLink + 万方，归一化后交叉合并返回 size 条。
-    向每个源各请求 size 条，交叉合并后取前 size 条。
+    聚合专利检索：并发查询 OilLink + 万方，归一化后按申请日降序合并返回。
+    向每个源各请求 size 条，合并后按年份排序全部返回。
     """
     kw_list = [k.strip() for k in keywords.split(',') if k.strip()]
     kw_str = ' '.join(kw_list)
@@ -520,7 +519,6 @@ async def search_all_patents(
 
     merged = list(oilink_res) + list(wanfang_res)
     merged.sort(key=lambda x: _extract_year(x.get('app_date')) or 0, reverse=True)
-    result = merged[:size]
 
-    print(f"聚合专利结果: OilLink={len(oilink_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
-    return {"code": 200, "msg": "success", "data": result}
+    print(f"聚合专利结果: OilLink={len(oilink_res)}, 万方={len(wanfang_res)}, 返回={len(merged)}")
+    return {"code": 200, "msg": "success", "data": merged}
