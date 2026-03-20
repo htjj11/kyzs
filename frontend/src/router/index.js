@@ -1,4 +1,4 @@
-import {createRouter, createWebHashHistory, createWebHistory} from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import { getUserIdFromCookie } from '@/utils/authUtils'
 
 // 导入登录组件
@@ -8,8 +8,8 @@ import login from "@/login.vue"
 // 假设该文件相对于当前文件的路径是 "../components/wxjs.vue"，请根据实际目录结构调整
 import literatureSearch from "@/components/baogao/literature_search.vue";
 import patentSearch from "@/components/baogao/patent_search.vue";
-import wlxxjs from "@/components/baogao/3wlxxjs.vue";
-import zlsc from "@/components/baogao/4zlsc.vue";
+import webinfoSearch from "@/components/baogao/webinfo_search.vue";
+import fileUpload from "@/components/baogao/file_upload.vue";
 import zskck from "@/components/baogao/5zskck.vue";
 import zsck from "@/components/baogao/zsck.vue";
 import zsck2 from "@/components/baogao/zsck2.vue";
@@ -49,15 +49,24 @@ const router = createRouter({
       redirect: '/wxjs'
     },
     {
-      path: '/wxjs',
-      name: 'wxjs',
+      //文献搜索
+      path: '/literatureSearch',
+      name: 'literatureSearch',
       component: literatureSearch,
       meta: { requiresAuth: true }
     },
     {
-      path: '/zljs',
-      name: 'zljs',
+      //专利检索
+      path: '/patentSearch',
+      name: 'patentSearch',
       component: patentSearch,
+      meta: { requiresAuth: true }
+    },
+    {
+      //资料上传
+      path: '/fileUpload',
+      name: 'fileUpload',
+      component: fileUpload,
       meta: { requiresAuth: true }
     },
     {
@@ -78,13 +87,6 @@ const router = createRouter({
       component: zskck,
       meta: { requiresAuth: true }
     },
-    
-    {
-      path: '/zlsc',
-      name: 'zlsc',
-      component: zlsc,
-      meta: { requiresAuth: true }
-    },
     {
       path: '/qtsz',
       name: 'qtsz',
@@ -92,9 +94,9 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/wlxxjs',
-      name: 'wlxxjs',
-      component: wlxxjs,
+      path: '/webinfoSearch',
+      name: 'webinfoSearch',
+      component: webinfoSearch,
       meta: { requiresAuth: true }
     },
     {
@@ -143,7 +145,7 @@ const router = createRouter({
       name: 'new_editor',
       component: new_editor,
       meta: { requiresAuth: true }
-    }
+    },
   ]
 })
 
@@ -152,11 +154,11 @@ router.beforeEach((to, from, next) => {
   // 检查路由是否需要认证
   const requiresAuth = to.meta.requiresAuth !== false; // 默认需要认证
   const isLoggedIn = isUserLoggedIn();
-  
+
   // 特殊处理：如果用户已登录且尝试访问登录页面，则重定向到首页
   if (isLoggedIn && to.path === '/login') {
     next('/'); // 重定向到首页或其他合适的页面
-  } 
+  }
   // 普通情况：需要认证但未登录，重定向到登录页面
   else if (requiresAuth && !isLoggedIn) {
     next('/login');

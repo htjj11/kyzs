@@ -1,10 +1,12 @@
 <template>
   <div class="patent-container">
-    <h3 class="page-title">专利检索</h3>
     <div class="search-form">
       <div class="form-row">
         <div class="form-item">
           <label>关键词：</label>
+          <el-tooltip content="专利使用英文搜索结果更多哦" placement="top">
+            <el-button type="text" icon="InfoFilled" class="info-tooltip" style="margin-left:4px;" />
+          </el-tooltip>
           <el-input v-model="keywords" placeholder="多个关键词用逗号分隔" style="width:300px" clearable @keyup.enter="doSearch" />
         </div>
         <div class="form-item">
@@ -15,6 +17,7 @@
         </div>
         <div class="form-actions">
           <el-button type="primary" :loading="loading" @click="doSearch">搜索</el-button>
+          <el-checkbox v-model="useTranslation">中译英搜索</el-checkbox>
         </div>
       </div>
     </div>
@@ -80,12 +83,15 @@ import request from '@/api/request.js'
 import { ElMessage } from 'element-plus'
 import { getUserIdFromCookie } from '@/utils/authUtils.js'
 import GetLabelList from '@/components/small/get_label_list.vue'
+import { InfoFilled } from '@element-plus/icons-vue'
 
 const currentYear = new Date().getFullYear()
 const keywords = ref('')
-const startYear = ref(null)
-const endYear = ref(null)
+const startYear = ref(currentYear - 5)
+const endYear = ref(currentYear)
 const loading = ref(false)
+const loadingText = ref('正在检索专利…')
+const useTranslation = ref(false)
 const searched = ref(false)
 
 const list = ref([])
@@ -93,8 +99,30 @@ const page = ref(1)
 const pageSize = ref(20)
 
 // =================== 搜索 ===================
-const doSearch = () => {
+const translateKeyword = async (kw) => {
+  try {
+    const resp = await request.post('/get_source/translate_keyword', { keyword: kw })
+    if (resp.data.code === 200) {
+      const result = resp.data.data?.translate_result || kw
+      return typeof result === 'string' ? result : String(result)
+    }
+    return kw
+  } catch { return kw }
+}
+
+const doSearch = async () => {
   if (!keywords.value.trim()) { ElMessage.warning('请输入搜索关键词'); return }
+  let kw = keywords.value
+  if (useTranslation.value) {
+    loadingText.value = '正在翻译关键词…'
+    loading.value = true
+    const arr = kw.split(',').map(k => k.trim()).filter(Boolean)
+    const translated = []
+    for (const k of arr) translated.push(await translateKeyword(k))
+    kw = translated.join(',')
+    keywords.value = kw
+    loading.value = false
+  }
   page.value = 1
   fetchData()
 }
@@ -103,7 +131,7 @@ const fetchData = async () => {
   loading.value = true
   searched.value = true
   try {
-    const resp = await request.post('/get_from_oilink/search_all_patents', {
+    const resp = await request.post('/get_source/search_all_patents', {
       keywords: keywords.value.trim(),
       start_year: startYear.value || null,
       end_year: endYear.value || null,
@@ -191,21 +219,98 @@ const handleLabelConfirm = async ({ label_id }) => {
 </script>
 
 <style scoped>
-.patent-container { padding: 20px; min-height: 100vh; background: #f5f7fa; }
-.page-title { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 16px; }
-.search-form { background: #fff; padding: 16px 20px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+.loading-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid #ddd;
+  border-top-color: #1a2b4a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #1a2b4a;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.patent-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  background: #f4f6f8;
+  overflow: hidden;
+}
+
+/* 搜索栏：固定高度 */
+.search-form {
+  flex-shrink: 0;
+  background: #fff;
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+
 .form-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .form-item { display: flex; align-items: center; gap: 6px; }
 .form-item label { font-weight: 500; color: #606266; white-space: nowrap; }
 .form-actions { margin-left: auto; display: flex; gap: 8px; }
 .year-sep { margin: 0 4px; color: #999; }
-.data-section { background: #fff; padding: 16px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+
+/* 数据区：撑满剩余高度 */
+.data-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  padding: 12px 16px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* el-table 填满 data-section 剩余空间 */
+:deep(.el-table) {
+  flex: 1;
+  height: 0 !important;
+}
+:deep(.el-table__body-wrapper) { overflow-y: auto; }
+
 .collected-text { color: #67c23a; font-size: 13px; }
 .title-link { color: #409eff; cursor: pointer; }
-.pagination-box { display: flex; align-items: center; gap: 12px; margin-top: 16px; justify-content: center; }
+
+/* 分页栏 */
+.pagination-box {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  justify-content: center;
+}
 .page-info { font-size: 14px; color: #606266; min-width: 60px; text-align: center; }
 .page-sep { color: #ddd; }
 .page-label { font-size: 13px; color: #909399; }
+
 .patent-detail { max-height: 70vh; overflow-y: auto; }
 .detail-row { display: flex; margin-bottom: 14px; }
 .detail-label { width: 110px; font-weight: bold; color: #606266; flex-shrink: 0; }

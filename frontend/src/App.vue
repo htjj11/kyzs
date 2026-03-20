@@ -3,7 +3,7 @@
   <div v-if="!isLoggedIn" class="login-container">
     <router-view></router-view>
   </div>
-  
+
   <!-- 如果已登录，显示完整的应用布局 -->
   <div v-else class="research-layout">
     <el-container class="main-container">
@@ -11,58 +11,65 @@
       <el-header class="header">
         <div class="header-content">
           <h1 class="system-title">
-            <el-icon class="title-icon"><Document /></el-icon>
+            <el-icon class="title-icon">
+              <Document />
+            </el-icon>
             科研情报系统
           </h1>
           <div class="header-actions">
-             <span class="id-value">{{ currentUserName }}</span>
+            <span class="id-value">{{ currentUserName }}</span>
             <el-button type="warning" size="small" @click="handleLogout">
               注销
             </el-button>
             <el-button type="primary" size="small" circle>
-              <el-icon><Setting /></el-icon>
+              <el-icon>
+                <Setting />
+              </el-icon>
             </el-button>
           </div>
         </div>
       </el-header>
-      
+
       <el-container class="body-container">
         <!-- 侧边栏 -->
         <el-aside class="sidebar">
           <div class="sidebar-content">
-            <el-menu
-              default-active="1"
-              class="sidebar-menu"
-              @open="handleOpen"
-              @close="handleClose"
-              background-color="transparent"
-              text-color="#4a5568"
-              active-text-color="#3b82f6"
-            >
+            <el-menu default-active="1" class="sidebar-menu" @open="handleOpen" @close="handleClose"
+              background-color="transparent" text-color="#4a5568" active-text-color="#3b82f6">
               <el-sub-menu index="1" class="menu-group">
                 <template #title>
                   <div class="menu-title">
-                    <el-icon class="menu-icon"><Location /></el-icon>
+                    <el-icon class="menu-icon">
+                      <Location />
+                    </el-icon>
                     <span>报告智能体</span>
                   </div>
                 </template>
                 <div class="submenu-group">
                   <div class="group-label">知识信息检索</div>
-                  <el-menu-item index="/wxjs" class="menu-item">
-                    <el-icon><Document /></el-icon>
-                    <router-link to="/wxjs" class="menu-link">文献检索</router-link>
+                  <el-menu-item index="/literatureSearch" class="menu-item">
+                    <el-icon>
+                      <Document />
+                    </el-icon>
+                    <router-link to="/literatureSearch" class="menu-link">文献检索</router-link>
                   </el-menu-item>
-                  <el-menu-item index="/zljs" class="menu-item">
-                    <el-icon><Collection /></el-icon>
-                    <router-link to="/zljs" class="menu-link">专利检索</router-link>
+                  <el-menu-item index="/patentSearch" class="menu-item">
+                    <el-icon>
+                      <Collection />
+                    </el-icon>
+                    <router-link to="/patentSearch" class="menu-link">专利检索</router-link>
                   </el-menu-item>
-                  <el-menu-item index="/wlxxjs" class="menu-item">
-                    <el-icon><Connection /></el-icon>
-                    <router-link to="/wlxxjs" class="menu-link">网络信息检索</router-link>
+                  <el-menu-item index="/webinfoSearch" class="menu-item">
+                    <el-icon>
+                      <Connection />
+                    </el-icon>
+                    <router-link to="/webinfoSearch" class="menu-link">网络信息检索</router-link>
                   </el-menu-item>
-                  <el-menu-item index="/zlsc" class="menu-item">
-                    <el-icon><Upload /></el-icon>
-                    <router-link to="/zlsc" class="menu-link">个人资料上传</router-link>
+                  <el-menu-item index="/fileUpload" class="menu-item">
+                    <el-icon>
+                      <Upload />
+                    </el-icon>
+                    <router-link to="/fileUpload" class="menu-link">个人资料上传</router-link>
                   </el-menu-item>
 
                 </div>
@@ -73,33 +80,41 @@
                     <el-icon class="eye-icon">👁‍🗨</el-icon>
                     <router-link to="/zsck" class="menu-link">报告</router-link>
                   </el-menu-item>
-                    <el-menu-item index="4" class="menu-item">
+                  <el-menu-item index="4" class="menu-item">
                     <el-icon class="eye-icon">👁‍🗨</el-icon>
                     <router-link to="/zsck2" class="menu-link">报告(新版编辑器)</router-link>
                   </el-menu-item>
                 </div>
               </el-sub-menu>
-              
+
               <el-sub-menu index="2" class="menu-group">
                 <template #title>
                   <div class="menu-title">
-                    <el-icon class="menu-icon"><Location /></el-icon>
+                    <el-icon class="menu-icon">
+                      <Location />
+                    </el-icon>
                     <span>翻译智能体</span>
                   </div>
                 </template>
                 <div class="submenu-group">
                   <div class="group-label">大模型翻译</div>
                   <el-menu-item index="/textTranslation" class="menu-item">
-                    <el-icon><Document /></el-icon>
+                    <el-icon>
+                      <Document />
+                    </el-icon>
                     <router-link to="/wbfy" class="menu-link">文本翻译</router-link>
                   </el-menu-item>
                   <el-menu-item index="/documentTranslation" class="menu-item">
-                    <el-icon><Notebook /></el-icon>
+                    <el-icon>
+                      <Notebook />
+                    </el-icon>
                     <router-link to="/wdfy" class="menu-link">文档翻译</router-link>
                   </el-menu-item>
 
                   <el-menu-item index="/ckgl" class="menu-item">
-                    <el-icon><ChatDotSquare /></el-icon>
+                    <el-icon>
+                      <ChatDotSquare />
+                    </el-icon>
                     <router-link to="/ckgl" class="menu-link">词库管理</router-link>
                   </el-menu-item>
 
@@ -109,36 +124,48 @@
               <el-sub-menu index="3" class="menu-group">
                 <template #title>
                   <div class="menu-title">
-                    <el-icon><ChatDotSquare /></el-icon>
+                    <el-icon>
+                      <ChatDotSquare />
+                    </el-icon>
                     <span>大模型知识库问答</span>
                   </div>
                 </template>
                 <el-menu-item index="/webTranslation" class="menu-item">
-                  <el-icon><EditPen /></el-icon>
+                  <el-icon>
+                    <EditPen />
+                  </el-icon>
                   <router-link to="/wenda" class="menu-link">问答对话</router-link>
                 </el-menu-item>
 
 
               </el-sub-menu>
-               
+
               <el-sub-menu index="5" class="menu-group">
                 <template #title>
                   <div class="menu-title">
-                    <el-icon><MessageBox /></el-icon>
+                    <el-icon>
+                      <MessageBox />
+                    </el-icon>
                     <span>知识库管理</span>
                   </div>
                 </template>
                 <div class="submenu-group">
                   <el-menu-item index="/all_db" class="menu-item">
-                    <el-icon><MessageBox /></el-icon>
+                    <el-icon>
+                      <MessageBox />
+                    </el-icon>
                     <router-link to="/all_db" class="menu-link">公共知识库查看</router-link>
                   </el-menu-item>
                   <el-menu-item index="/db_manage" class="menu-item">
-                    <el-icon><MessageBox /></el-icon>
+                    <el-icon>
+                      <MessageBox />
+                    </el-icon>
                     <router-link to="/db_manage" class="menu-link">公共知识库管理</router-link>
                   </el-menu-item>
                   <el-menu-item index="/zskck" class="menu-item">
-                    <el-icon><Message /></el-icon>
+                    <el-icon>
+                      <Message />
+                    </el-icon>
                     <router-link to="/zskck" class="menu-link">个人知识库管理</router-link>
                   </el-menu-item>
                 </div>
@@ -149,7 +176,7 @@
             </el-menu>
           </div>
         </el-aside>
-        
+
         <!-- 主内容区域 -->
         <el-main class="main-content">
           <div class="content-wrapper">
@@ -229,32 +256,33 @@ const handleClose = (key: string, keyPath: string[]) => {
   height: 100vh;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #f0f2f5;
 }
 
 .research-layout {
-  height: 96vh;
+  height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #eef0f3;
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
 }
 
 .main-container {
   height: 100%;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  margin: 16px;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
   overflow: hidden;
-  background: white;
+  background: #f4f6f8;
 }
 
-/* 顶部导航栏样式 */
+/* 顶部导航栏样式 — 深海军蓝，科研机构风格 */
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1a2b4a;
   color: white;
-  padding: 0 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  height: 64px !important;
+  padding: 0 28px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  height: 56px !important;
+  border-bottom: 2px solid #0f5ea8;
 }
 
 .header-content {
@@ -267,15 +295,17 @@ const handleClose = (key: string, keyPath: string[]) => {
 .system-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  color: #e8edf5;
+  letter-spacing: 0.5px;
 }
 
 .title-icon {
-  font-size: 24px;
+  font-size: 20px;
+  color: #5ba4e0;
 }
 
 .header-actions {
@@ -286,26 +316,27 @@ const handleClose = (key: string, keyPath: string[]) => {
 
 /* 当前用户ID显示样式 */
 .id-value {
-  font-weight: 600;
-  color: #fff;
+  font-weight: 500;
+  color: #a8c4e0;
   margin-left: 4px;
+  font-size: 13px;
 }
 
 /* 主体容器样式 */
 .body-container {
-  height: calc(100% - 64px);
+  height: calc(100% - 56px);
 }
 
-/* 侧边栏样式 */
+/* 侧边栏样式 — 白底、左蓝边框点缀 */
 .sidebar {
-  width: 280px !important;
-  background: #f8fafc;
-  border-right: 1px solid #e2e8f0;
+  width: 260px !important;
+  background: #ffffff;
+  border-right: 1px solid #d6dce6;
   overflow-y: auto;
 }
 
 .sidebar-content {
-  padding: 24px 16px;
+  padding: 16px 12px;
 }
 
 .sidebar-menu {
@@ -314,45 +345,48 @@ const handleClose = (key: string, keyPath: string[]) => {
 }
 
 .menu-group {
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
 .menu-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 600;
-  color: #2d3748;
+  color: #1a2b4a;
+  font-size: 13px;
 }
 
 .menu-icon {
-  font-size: 18px;
-  color: #4299e1;
+  font-size: 16px;
+  color: #2664a8;
 }
 
 .submenu-group {
-  padding-left: 16px;
-  margin-top: 8px;
+  padding-left: 8px;
+  margin-top: 4px;
 }
 
 .group-label {
-  font-size: 12px;
-  color: #718096;
+  font-size: 11px;
+  color: #8a9ab5;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  padding-left: 16px;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+  padding-left: 12px;
+  margin-top: 8px;
+  font-weight: 600;
 }
 
 .menu-item {
-  margin: 4px 0;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  margin: 2px 0;
+  border-radius: 3px;
+  transition: background 0.15s ease;
 }
 
 .menu-item:hover {
-  background-color: #edf2f7;
-  transform: translateX(4px);
+  background-color: #eaf1fb;
+  transform: none;
 }
 
 .menu-link {
@@ -364,57 +398,63 @@ const handleClose = (key: string, keyPath: string[]) => {
 }
 
 .eye-icon {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* 主内容区域样式 */
 .main-content {
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: #f4f6f8;
   padding: 0px;
 }
 
 .content-wrapper {
   width: 100%;
   height: 100%;
-  background: white;
-  border-radius: 0px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: #f4f6f8;
+  border-radius: 0;
+  box-shadow: none;
   padding: 0px;
 }
 
 /* Element Plus 组件样式覆盖 */
 :deep(.el-sub-menu__title) {
-  height: 48px;
-  line-height: 48px;
-  padding-left: 16px !important;
-  border-radius: 8px;
-  margin: 4px 0;
-  transition: all 0.2s ease;
+  height: 44px;
+  line-height: 44px;
+  padding-left: 12px !important;
+  border-radius: 3px;
+  margin: 2px 0;
+  transition: background 0.15s ease;
+  color: #1a2b4a;
+  font-size: 13px;
 }
 
 :deep(.el-sub-menu__title:hover) {
-  background-color: #edf2f7;
+  background-color: #eaf1fb;
 }
 
 :deep(.el-menu-item) {
-  height: 40px;
-  line-height: 40px;
-  padding-left: 32px !important;
-  border-radius: 6px;
-  margin: 2px 0;
+  height: 38px;
+  line-height: 38px;
+  padding-left: 28px !important;
+  border-radius: 3px;
+  margin: 1px 0;
+  font-size: 13px;
+  color: #3a4a62;
 }
 
 :deep(.el-menu-item.is-active) {
-  background-color: #ebf8ff;
-  color: #3182ce;
-  font-weight: 500;
+  background-color: #ddeeff;
+  color: #1a5caa;
+  font-weight: 600;
+  border-left: 3px solid #1a5caa;
 }
 
 :deep(.el-menu-item .el-icon) {
   margin-right: 8px;
-  font-size: 16px;
+  font-size: 15px;
+  color: #2664a8;
 }
 
 /* 响应式设计 */
@@ -422,18 +462,18 @@ const handleClose = (key: string, keyPath: string[]) => {
   .research-layout {
     margin: 0;
   }
-  
+
   .main-container {
     margin: 0;
     border-radius: 0;
   }
-  
+
   .sidebar {
-    width: 240px !important;
+    width: 220px !important;
   }
-  
+
   .system-title {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 </style>

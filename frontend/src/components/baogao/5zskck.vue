@@ -5,37 +5,28 @@
       <!-- 标签筛选标签页 -->
       <div class="label-tabs-container">
         <div class="label-tabs">
-          <button 
-            class="label-tab" 
-            :class="{ active: !filters.labelId }"
-            @click="selectLabel('')"
-          >
+          <button class="label-tab" :class="{ active: !filters.labelId }" @click="selectLabel('')">
             全部标签
           </button>
-          <button 
-            v-for="label in labelList" 
-            :key="label.id"
-            class="label-tab"
-            :class="{ active: filters.labelId === label.id.toString() }"
-            @click="selectLabel(label.id.toString())"
-          >
+          <button v-for="label in labelList" :key="label.id" class="label-tab"
+            :class="{ active: filters.labelId === label.id.toString() }" @click="selectLabel(label.id.toString())">
             {{ label.label_name }}
           </button>
         </div>
       </div>
-      
+
       <!-- 其他筛选条件 -->
       <div class="filter-row">
         <div class="filter-item">
           <label>标题包含：</label>
           <input v-model="filters.title" type="text" placeholder="请输入标题关键字" class="filter-input">
         </div>
-        
+
         <div class="filter-item">
           <label>内容包含：</label>
           <input v-model="filters.content" type="text" placeholder="请输入内容关键字" class="filter-input">
         </div>
-        
+
         <div class="filter-item">
           <label>类型：</label>
           <el-select v-model="filters.typeId" placeholder="请选择类型" class="filter-input">
@@ -47,34 +38,34 @@
             <el-option label="用户自定义上传文档" value="5"></el-option>
           </el-select>
         </div>
-        
+
         <div class="filter-item">
           <label>标记信息：</label>
           <input v-model="filters.markInfo" type="text" placeholder="请输入标记信息关键字" class="filter-input">
         </div>
-        
+
         <div class="filter-actions-inline">
           <button @click="resetFilters" class="btn reset-btn">重置筛选</button>
         </div>
       </div>
     </div>
-    
+
     <!-- 数据展示区域 -->
     <div class="data-section">
       <div v-if="loading" class="loading-state">
         <span>加载中...</span>
       </div>
-      
+
       <div v-else-if="error" class="error-state">
         <span>加载失败：{{ error }}</span>
         <button @click="fetchKnowledgeList" class="btn retry-btn">重试</button>
       </div>
-      
+
       <div v-else>
         <div class="data-summary">
           <span>共 {{ filteredKnowledgeList.length }} 条记录（原始数据：{{ knowledgeList.length }} 条）</span>
         </div>
-        
+
         <div class="knowledge-list">
           <div v-for="item in filteredKnowledgeList" :key="item.id" class="knowledge-item">
             <div class="item-header">
@@ -85,14 +76,16 @@
                 <span class="meta-label">类型: {{ getTypeName(item.type_id) }}</span>
               </div>
             </div>
-            
+
             <div class="item-content">
-              <p>{{ truncateText(item.content, 200) }}</p>
+              <p>{{ truncateText(item.content, 80) }}</p>
             </div>
-            
+
             <div class="item-footer">
               <span class="mark-info">标记信息：{{ item.mark_info }}</span>
               <div class="item-actions">
+                <button v-if="item.type_id === 5" @click="downloadSourceFile(item)"
+                  class="action-btn download-btn">下载源文件</button>
                 <button @click="editKnowledge(item)" class="action-btn edit-btn">编辑</button>
                 <button @click="deleteKnowledge(item.id)" class="action-btn delete-btn">删除</button>
                 <button @click="viewKnowledge(item)" class="action-btn view-btn">查看详情</button>
@@ -100,7 +93,7 @@
             </div>
           </div>
         </div>
-        
+
         <div v-if="filteredKnowledgeList.length === 0" class="empty-state">
           <span>暂无符合条件的知识库记录</span>
         </div>
@@ -109,76 +102,45 @@
   </div>
 
   <!-- 知识库详情弹窗（全屏） -->
-  <el-dialog
-    v-model="showDetailModal"
-    title="知识库详情"
-    fullscreen
-    :before-close="closeDetailModal"
-    append-to-body
-  >
+  <el-dialog v-model="showDetailModal" title="知识库详情" fullscreen :before-close="closeDetailModal" append-to-body>
     <template #default>
-      <show-knowledge-info 
-        v-if="selectedKnowledgeItem"
-        :knowledgeData="selectedKnowledgeItem"
-        :show-actions="true"
-        @edit="handleDetailEdit"
-        @delete="handleDetailDelete"
-        @close="closeDetailModal"
-      />
+      <show-knowledge-info v-if="selectedKnowledgeItem" :knowledgeData="selectedKnowledgeItem" :show-actions="true"
+        @edit="handleDetailEdit" @delete="handleDetailDelete" @close="closeDetailModal" />
     </template>
   </el-dialog>
 
   <!-- 知识库编辑弹窗 -->
-  <el-dialog
-    v-model="showEditModal"
-    title="编辑知识库"
-    :width="'60%'"
-    :before-close="closeEditModal"
-    append-to-body
-  >
+  <el-dialog v-model="showEditModal" title="编辑知识库" :width="'60%'" :before-close="closeEditModal" append-to-body>
     <template #default>
       <div class="edit-form">
         <div class="form-item">
           <label class="form-label">知识ID</label>
           <el-input v-model="editForm.knowledge_id" disabled placeholder="知识ID" />
         </div>
-        
+
         <div class="form-item">
           <label class="form-label">知识名称 <span class="required">*</span></label>
           <el-input v-model="editForm.knowledge_title" placeholder="请输入知识名称" />
         </div>
-        
+
         <div class="form-item">
           <label class="form-label">知识内容 <span class="required">*</span></label>
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <el-input 
-              v-model="editForm.knowledge_content" 
-              type="textarea" 
-              :rows="6" 
-              placeholder="请输入知识内容"
-            />
-            <el-button 
-              type="primary" 
-              size="small"
-              @click="openAiEditModal"
-              style="align-self: flex-start;">
+            <el-input v-model="editForm.knowledge_content" type="textarea" :rows="6" placeholder="请输入知识内容" />
+            <el-button type="primary" size="small" @click="openAiEditModal" style="align-self: flex-start;">
               AI修改
             </el-button>
           </div>
         </div>
-        
+
         <div class="form-item">
           <label class="form-label">知识标签 <span class="required">*</span></label>
           <el-select v-model="editForm.knowledge_label" placeholder="请选择标签">
-            <el-option 
-              v-for="label in labelList" 
-              :key="label.id" 
-              :label="label.label_name" 
-              :value="label.id"
-            ></el-option>
+            <el-option v-for="label in labelList" :key="label.id" :label="label.label_name"
+              :value="label.id"></el-option>
           </el-select>
         </div>
-        
+
         <div class="form-item">
           <label class="form-label">知识类型 <span class="required">*</span></label>
           <el-select v-model="editForm.knowledge_type" placeholder="请选择知识类型">
@@ -189,7 +151,7 @@
             <el-option label="用户自定义上传文档" value="5"></el-option>
           </el-select>
         </div>
-        
+
         <div class="form-item">
           <label class="form-label">备注</label>
           <el-input v-model="editForm.knowledge_mark_info" placeholder="请输入备注信息" />
@@ -206,70 +168,40 @@
   </el-dialog>
 
   <!-- AI修改弹窗 -->
-  <el-dialog
-    v-model="showAiEditModal"
-    title="AI修改知识内容"
-    :width="'60%'"
-    :before-close="closeAiEditModal"
-    append-to-body
-  >
+  <el-dialog v-model="showAiEditModal" title="AI修改知识内容" :width="'60%'" :before-close="closeAiEditModal" append-to-body>
     <template #default>
       <div class="ai-edit-form">
         <div class="form-item">
           <label class="form-label">原文</label>
-          <el-input 
-            v-model="aiEditForm.originalContent" 
-            type="textarea" 
-            :rows="6" 
-            disabled
-            placeholder="知识内容原文"
-          />
+          <el-input v-model="aiEditForm.originalContent" type="textarea" :rows="6" disabled placeholder="知识内容原文" />
         </div>
-        
+
         <div class="form-item">
           <label class="form-label">修改意见 <span class="required">*</span></label>
-          <el-input 
-            v-model="aiEditForm.prompt" 
-            type="textarea" 
-            :rows="4" 
-            placeholder="请输入您的修改需求，例如：润色、缩短、扩写等"
-          />
+          <el-input v-model="aiEditForm.prompt" type="textarea" :rows="4" placeholder="请输入您的修改需求，例如：润色、缩短、扩写等" />
         </div>
-        
+
         <!-- 提示词选择区域 -->
         <div class="form-item">
           <label class="form-label">预设提示词</label>
-          
+
           <!-- 提示词筛选 -->
           <div class="prompt-filter-row">
-            <el-input 
-              v-model="filterPromptName" 
-              placeholder="提示词名称关键字" 
-              clearable 
-              style="width: 200px; margin-right: 12px; margin-bottom: 8px;"
-            />
-            <el-button 
-              type="primary" 
-              size="small" 
-              @click="applyPromptFilter"
-              style="margin-bottom: 8px;"
-            >
+            <el-input v-model="filterPromptName" placeholder="提示词名称关键字" clearable
+              style="width: 200px; margin-right: 12px; margin-bottom: 8px;" />
+            <el-button type="primary" size="small" @click="applyPromptFilter" style="margin-bottom: 8px;">
               筛选
             </el-button>
           </div>
-          
+
           <!-- 提示词选择列表 -->
           <div v-if="promptLoading" class="prompt-loading">
             <span>加载提示词中...</span>
           </div>
           <div v-else-if="filteredPromptList.length > 0" class="prompt-list">
             <el-checkbox-group v-model="selectedPromptIds">
-              <el-checkbox 
-                v-for="promptItem in filteredPromptList" 
-                :key="promptItem.id" 
-                :label="promptItem.id" 
-                style="margin-right: 16px; margin-bottom: 8px; display: inline-block;"
-              >
+              <el-checkbox v-for="promptItem in filteredPromptList" :key="promptItem.id" :label="promptItem.id"
+                style="margin-right: 16px; margin-bottom: 8px; display: inline-block;">
                 {{ promptItem.name }}
               </el-checkbox>
             </el-checkbox-group>
@@ -315,8 +247,8 @@ const filters = ref({
 // 从cookie中获取user_id
 const getUserIdFromCookie = () => {
   const cookieValue = document.cookie
-    .split('; ') 
-    .find(row => row.startsWith('user_id=')) 
+    .split('; ')
+    .find(row => row.startsWith('user_id='))
     ?.split('=')[1];
   // 如果cookie中没有user_id或值无效，返回默认值1
   return cookieValue && !isNaN(Number(cookieValue)) ? Number(cookieValue) : 1;
@@ -326,7 +258,7 @@ const getUserIdFromCookie = () => {
 const fetchKnowledgeList = async () => {
   loading.value = true
   error.value = ''
-  
+
   try {
     // 从cookie中获取user_id
     const userId = getUserIdFromCookie();
@@ -334,8 +266,8 @@ const fetchKnowledgeList = async () => {
       user_id: userId
     })
     if (response.data['code'] === 200) {
-        console.log('获取全部知识库内容：',response.data['data'])
-      knowledgeList.value = response.data['data'] 
+      console.log('获取全部知识库内容：', response.data['data'])
+      knowledgeList.value = response.data['data']
       ElMessage.success('数据加载成功')
     } else {
       throw new Error(response.msg || '获取数据失败')
@@ -355,27 +287,27 @@ const filteredKnowledgeList = computed(() => {
     if (filters.value.title && !item.title.includes(filters.value.title)) {
       return false
     }
-    
+
     // 内容筛选
     if (filters.value.content && !item.content.includes(filters.value.content)) {
       return false
     }
-    
+
     // 标签ID筛选
     if (filters.value.labelId && item.label_id !== parseInt(filters.value.labelId)) {
       return false
     }
-    
+
     // 类型ID筛选
     if (filters.value.typeId && item.type_id !== parseInt(filters.value.typeId)) {
       return false
     }
-    
+
     // 标记信息筛选
     if (filters.value.markInfo && !item.mark_info.includes(filters.value.markInfo)) {
       return false
     }
-    
+
     return true
   })
 })
@@ -488,7 +420,7 @@ const deleteKnowledge = async (id) => {
 
     if (confirmResult === 'confirm') {
       // 调用删除接口
-      const response = await request.post('/get_knowledge/delete_knoledge_by_id', {
+      const response = await request.post('/get_knowledge/delete_knowledge_by_id', {
         knowledge_id: id
       })
 
@@ -514,7 +446,7 @@ const selectedKnowledgeItem = ref(null)
 
 // 查看知识库详情
 const viewKnowledge = (item) => {
-  console.log('查看单条收藏详情：',item)
+  console.log('查看单条收藏详情：', item)
   selectedKnowledgeItem.value = item
   showDetailModal.value = true
 }
@@ -583,7 +515,7 @@ const fetchPromptList = async () => {
     const response = await request.post('/get_setting/get_all_prompt', {
       user_id: userId
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       promptList.value = response.data.data || [];
       filteredPromptList.value = [...promptList.value];
@@ -601,13 +533,13 @@ const fetchPromptList = async () => {
 const applyPromptFilter = () => {
   filteredPromptList.value = promptList.value.filter(item => {
     // 提示词名称筛选
-    const nameMatch = !filterPromptName.value || 
+    const nameMatch = !filterPromptName.value ||
       (item.name && item.name.toLowerCase().includes(filterPromptName.value.toLowerCase()));
-    
+
     // 提示词类型筛选
-    const typeMatch = !filterPromptType.value || 
+    const typeMatch = !filterPromptType.value ||
       (item.type && String(item.type) === String(filterPromptType.value));
-    
+
     return nameMatch && typeMatch;
   });
 };
@@ -618,10 +550,10 @@ const openAiEditModal = async () => {
   aiEditForm.originalContent = editForm.value.knowledge_content;
   aiEditForm.prompt = ''; // 清空上次的修改意见
   selectedPromptIds.value = []; // 清空上次的选择
-  
+
   // 获取提示词列表
   await fetchPromptList();
-  
+
   showAiEditModal.value = true;
 };
 
@@ -636,33 +568,33 @@ const submitAiEdit = async () => {
     ElMessage.error('请输入修改意见或选择提示词');
     return;
   }
-  
+
   // 构建完整的提示词
   let fullPrompt = aiEditForm.prompt;
-  
+
   // 将选中的提示词文本拼接到修改意见后
   console.log('选中的提示词ID:', selectedPromptIds.value);
   console.log('提示词列表:', promptList.value);
-  
+
   if (selectedPromptIds.value.length > 0) {
-    const selectedPrompts = promptList.value.filter(p => 
+    const selectedPrompts = promptList.value.filter(p =>
       selectedPromptIds.value.includes(p.id)
     );
-    
+
     console.log('筛选后的提示词:', selectedPrompts);
-    
+
     if (selectedPrompts.length > 0) {
-        const promptTexts = selectedPrompts.map(p => {
-          console.log('提示词对象:', p, 'text属性:', p.text);
-          return p.text || '';
-        }).join(' ');
-      
+      const promptTexts = selectedPrompts.map(p => {
+        console.log('提示词对象:', p, 'text属性:', p.text);
+        return p.text || '';
+      }).join(' ');
+
       console.log('拼接的提示词文本:', promptTexts);
       fullPrompt = fullPrompt ? `${fullPrompt} ${promptTexts}` : promptTexts;
       console.log('拼接后的完整提示词:', fullPrompt);
     }
   }
-  
+
   try {
     ElLoading.service({ text: '正在生成修改内容...' });
     const response = await request.post('/get_knowledge/generate_content_by_ai', {
@@ -670,9 +602,9 @@ const submitAiEdit = async () => {
       prompt: fullPrompt
     });
     console.log('AI修改请求:', fullPrompt);
-    
+
     if (response.data['code'] === 200 && response.data.data?.content) {
-      console.log('AI修改内容：'+response.data.data.content)
+      console.log('AI修改内容：' + response.data.data.content)
       // 用AI生成的内容替换知识内容
       editForm.value.knowledge_content = response.data.data.content;
       ElMessage.success('AI修改成功');
@@ -687,6 +619,72 @@ const submitAiEdit = async () => {
     ElLoading.service().close();
   }
 };
+// 下载源文件
+const downloadSourceFile = async (item) => {
+  try {
+    let fileName = item.title;
+    let downloadName = item.title;
+    try {
+      if (item.mark_info) {
+        const markInfoObj = JSON.parse(item.mark_info);
+        if (markInfoObj.filename) {
+          fileName = markInfoObj.filename;
+        }
+        if (markInfoObj.original_filename) {
+          downloadName = markInfoObj.original_filename;
+        }
+      }
+    } catch (e) {
+      console.warn('解析 mark_info 失败:', e);
+    }
+
+    // 提取扩展名，确保最终下载的文件有扩展名
+    const extMatch = fileName.match(/\.[0-9a-z]+$/i);
+    if (extMatch) {
+      const ext = extMatch[0];
+      if (!downloadName.toLowerCase().endsWith(ext.toLowerCase())) {
+        downloadName += ext;
+      }
+    }
+
+    ElLoading.service({ text: '正在准备下载...' });
+    const response = await request.post('/get_knowledge/get_file_by_id', {
+      file_name: fileName
+    });
+
+    if (response.data && response.data.code === 200 && response.data.data) {
+      console.log('下载文件成功:', response.data.data);
+      const base64Data = response.data.data;
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray]);
+
+      const downloadLink = document.createElement('a');
+      const url = window.URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.download = downloadName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+
+      document.body.removeChild(downloadLink);
+      window.URL.revokeObjectURL(url);
+
+      ElMessage.success('下载成功');
+    } else {
+      ElMessage.error(response.data?.msg || '下载失败，解析结果为空');
+    }
+  } catch (error) {
+    console.error('下载文件失败:', error);
+    ElMessage.error('下载请求失败，请检查网络或稍后重试');
+  } finally {
+    ElLoading.service().close();
+  }
+};
+
 // 组件中添加一个方法来获取类型名称
 const getTypeName = (typeId) => {
   const typeMap = {
@@ -937,16 +935,18 @@ const getTypeName = (typeId) => {
 }
 
 .knowledge-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
 .knowledge-item {
   border: 1px solid #e8e8e8;
   border-radius: 8px;
-  padding: 16px;
+  padding: 10px;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
 .knowledge-item:hover {
@@ -955,15 +955,15 @@ const getTypeName = (typeId) => {
 }
 
 .item-header {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .item-title {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 500;
   color: #333;
-  margin: 0 0 8px 0;
-  line-height: 1.4;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
 }
 
 .item-meta {
@@ -973,18 +973,19 @@ const getTypeName = (typeId) => {
 }
 
 .meta-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
   background: #f5f5f5;
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 
 .item-content {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   color: #666;
-  line-height: 1.6;
-  font-size: 14px;
+  line-height: 1.4;
+  font-size: 12px;
+  flex-grow: 1;
 }
 
 .item-footer {
@@ -996,8 +997,9 @@ const getTypeName = (typeId) => {
 }
 
 .mark-info {
-  font-size: 13px;
+  font-size: 11px;
   color: #1890ff;
+  margin-bottom: 6px;
 }
 
 .item-actions {
@@ -1006,12 +1008,21 @@ const getTypeName = (typeId) => {
 }
 
 .action-btn {
-  padding: 6px 12px;
+  padding: 3px 8px;
   border: none;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.3s;
+}
+
+.download-btn {
+  background: #faad14;
+  color: white;
+}
+
+.download-btn:hover {
+  background: #ffc53d;
 }
 
 .edit-btn {
@@ -1047,21 +1058,21 @@ const getTypeName = (typeId) => {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .filter-item {
     width: 100%;
   }
-  
+
   .filter-input {
     min-width: auto;
     flex: 1;
   }
-  
+
   .item-footer {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .item-actions {
     width: 100%;
     justify-content: space-between;
