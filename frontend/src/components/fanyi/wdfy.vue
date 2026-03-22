@@ -1,113 +1,100 @@
 <template>
-  <div class="document-list-container">
-    <div class="max-w-4xl mx-auto">
- 
-      
-      <!-- 文档列表标题和操作按钮 -->
+  <div class="document-list-wrapper">
+    <div class="document-list-container scientific-card">
+      <!-- 头部操作区 -->
       <div class="card-header">
-        <h2 class="card-title">文档列表</h2>
+        <div class="title-section">
+          <el-icon class="header-icon">
+            <Files />
+          </el-icon>
+          <h2 class="card-title">文档翻译任务列表</h2>
+        </div>
         <div class="header-buttons">
-          <el-button type="primary" @click="showNewTaskModal = true" class="new-task-button">
-            <el-icon><Plus /></el-icon>
-            新建翻译任务
+          <el-button type="primary" @click="showNewTaskModal = true" class="square-btn">
+            <el-icon>
+              <Plus />
+            </el-icon>
+            提交新任务
           </el-button>
-          <el-button type="success" @click="fetchDocumentList" class="refresh-button">
-            <el-icon><Refresh /></el-icon>
-            刷新列表
+          <el-button @click="fetchDocumentList" class="square-btn">
+            <el-icon>
+              <Refresh />
+            </el-icon>
+            刷新
           </el-button>
         </div>
       </div>
-        
+
+      <div class="content-body">
         <div v-if="loading" class="loading-container">
-          <el-icon class="loading-icon"><Loading /></el-icon>
+          <el-icon class="loading-icon">
+            <Loading />
+          </el-icon>
           <p class="loading-text">加载中...</p>
         </div>
-        
+
         <div v-else-if="documents.length === 0" class="empty-state">
           <el-empty description="暂无翻译文档" />
         </div>
-        
-        <div v-else class="document-table">
-          <el-table 
-            :data="documents" 
-            stripe 
-            style="width: 100%"
-            :header-cell-style="{ backgroundColor: '#f5f7fa', color: '#606266' }"
-          >
-            <el-table-column prop="id" label="文档ID" width="120" align="center" />
-            <el-table-column prop="name" label="文档名称" min-width="200" />
+
+        <div v-else class="document-table-wrapper">
+          <el-table :data="documents" border stripe style="width: 100%" class="square-table"
+            :header-cell-style="{ backgroundColor: '#fafbfc', color: '#303133', fontWeight: 'bold' }">
+            <el-table-column prop="id" label="ID" width="80" align="center" />
+            <el-table-column prop="name" label="文件名" min-width="250" show-overflow-tooltip />
             <el-table-column label="状态" width="120" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'warning'" size="small">
-                  {{ row.status === 1 ? '完成' : '未完成' }}
+                <el-tag :type="row.status === 1 ? 'success' : 'warning'" size="small" effect="plain" class="square-tag">
+                  {{ row.status === 1 ? '翻译完成' : '处理中' }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" align="center">
+            <el-table-column label="操作" min-width="300" align="center">
               <template #default="{ row }">
                 <div v-if="row.status === 1" class="action-buttons">
-                  <el-button 
-                    type="primary" 
-                    size="small" 
-                    @click="downloadDocument(row.id, 'docx')"
-                    :loading="downloading.includes(row.id + '_docx')"
-                  >
-                    <el-icon v-if="!downloading.includes(row.id + '_docx')"><Download /></el-icon>
-                    {{ downloading.includes(row.id + '_docx') ? '下载中...' : '下载DOCX' }}
+                  <el-button type="primary" plain size="small" class="square-btn"
+                    @click="downloadDocument(row.id, 'docx')" :loading="downloading.includes(row.id + '_docx')">
+                    <el-icon v-if="!downloading.includes(row.id + '_docx')">
+                      <Download />
+                    </el-icon>
+                    Word
                   </el-button>
-                  <el-button 
-                    type="success" 
-                    size="small" 
-                    @click="downloadDocument(row.id, 'pdf')"
-                    :loading="downloading.includes(row.id + '_pdf')"
-                  >
-                    <el-icon v-if="!downloading.includes(row.id + '_pdf')"><Download /></el-icon>
-                    {{ downloading.includes(row.id + '_pdf') ? '下载中...' : '下载PDF' }}
+                  <el-button type="success" plain size="small" class="square-btn"
+                    @click="downloadDocument(row.id, 'pdf')" :loading="downloading.includes(row.id + '_pdf')">
+                    <el-icon v-if="!downloading.includes(row.id + '_pdf')">
+                      <Download />
+                    </el-icon>
+                    PDF
                   </el-button>
-                  <el-popconfirm
-                    title="确定要删除这个文档记录吗？"
-                    @confirm="deleteDocument(row.id)"
-                    confirm-button-text="确定"
-                    cancel-button-text="取消"
-                  >
+                  <el-popconfirm title="确定要删除这个文档记录吗？" @confirm="deleteDocument(row.id)" confirm-button-text="确定"
+                    cancel-button-text="取消">
                     <template #reference>
-                      <el-button 
-                        type="danger" 
-                        size="small"
-                        :loading="downloading.includes(row.id + '_delete')"
-                      >
-                        <el-icon v-if="!downloading.includes(row.id + '_delete')"><Delete /></el-icon>
-                        删除记录
+                      <el-button type="danger" plain size="small" class="square-btn"
+                        :loading="downloading.includes(row.id + '_delete')">
+                        <el-icon v-if="!downloading.includes(row.id + '_delete')">
+                          <Delete />
+                        </el-icon>
+                        删除
                       </el-button>
                     </template>
                   </el-popconfirm>
                 </div>
-                <span v-else class="no-action">无操作</span>
+                <span v-else class="no-action">处理中，请稍候...</span>
               </template>
             </el-table-column>
           </el-table>
         </div>
-      
+      </div>
+
       <!-- 错误提示 -->
-      <el-alert
-        v-if="error"
-        :title="error"
-        type="error"
-        :closable="false"
-        show-icon
-        class="error-alert"
-      />
+      <el-alert v-if="error" :title="error" type="error" :closable="true" show-icon class="square-alert"
+        @close="error = ''" />
     </div>
   </div>
 
-  <!-- 新建翻译任务模态框 -->
-  <el-dialog
-    v-model="showNewTaskModal"
-    title="新建翻译任务"
-    width="80%"
-    :close-on-click-modal="false"
-    destroy-on-close
-  >
+  <!-- 新建翻译任务对话框 -->
+  <el-dialog v-model="showNewTaskModal" title="新建翻译任务" width="800px" :close-on-click-modal="false" destroy-on-close
+    class="square-dialog">
     <new_translate @close="showNewTaskModal = false" />
   </el-dialog>
 </template>
@@ -115,7 +102,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Refresh, Loading, Download, Delete } from '@element-plus/icons-vue'
+import { Plus, Refresh, Loading, Download, Delete, Files } from '@element-plus/icons-vue'
 import axios from "@/api/request.js";
 import new_translate from '@/components/small/new_translate.vue'
 
@@ -130,17 +117,21 @@ const showNewTaskModal = ref(false)
 const fetchDocumentList = async () => {
   loading.value = true
   error.value = ''
-  
+
   try {
-    const response = await axios.post('/translate/get_all_translate_doc_list', {
-    })
+    const response = await axios.post('/translate/get_all_translate_doc_list', {})
     const data = response.data
-    
+
     if (data && data.translate_doc_list && Array.isArray(data.translate_doc_list)) {
       documents.value = data.translate_doc_list
     } else {
       documents.value = []
-      error.value = '获取文档列表失败，数据格式不正确'
+      // 兼容直接返回数组的情况（视接口文档而定，这里保留原逻辑并增加宽容度）
+      if (Array.isArray(data)) {
+        documents.value = data
+      } else {
+        error.value = '获取文档列表失败，数据格式不正确'
+      }
     }
   } catch (err) {
     documents.value = []
@@ -156,25 +147,22 @@ const downloadDocument = async (docId, fileType) => {
   const downloadKey = `${docId}_${fileType}`
   downloading.value.push(downloadKey)
   error.value = ''
-  
+
   try {
     const response = await axios.post('/translate/get_translate_doc_detail', {
       doc_id: docId
     })
-    
+
     const data = response.data
     if (data && data.translate_doc_detail) {
-      // 根据 fileType 获取对应的 base64 字段
       const base64Data = fileType === 'pdf'
         ? data.translate_doc_detail.output_pdf_base64
         : data.translate_doc_detail.output_docx_base64
 
       if (!base64Data) {
-        error.value = '下载失败，文件数据不存在'
-        return
+        throw new Error('下载失败，服务器未返回文件数据')
       }
 
-      // 解码 base64 数据
       const byteCharacters = atob(base64Data)
       const byteNumbers = new Array(byteCharacters.length)
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -182,36 +170,31 @@ const downloadDocument = async (docId, fileType) => {
       }
       const byteArray = new Uint8Array(byteNumbers)
 
-      // 创建 Blob 对象
       const blob = new Blob([byteArray], {
         type: fileType === 'pdf'
           ? 'application/pdf'
           : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       })
 
-      // 创建下载链接
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
 
-      // 查找对应的文档名称
       const doc = documents.value.find(d => d.id === docId)
       const fileName = doc ? `${doc.name}.${fileType}` : `document_${docId}.${fileType}`
       link.download = fileName
 
-      // 触发下载
       document.body.appendChild(link)
       link.click()
-
-      // 清理
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
+      ElMessage.success('下载发起成功')
     } else {
-      error.value = '下载失败，文件数据不存在'
+      throw new Error('下载失败，文件详情获取不到')
     }
   } catch (err) {
     error.value = `下载${fileType.toUpperCase()}失败：` + (err.message || '未知错误')
-    console.error(`Download ${fileType} error:`, err)
+    ElMessage.error(error.value)
   } finally {
     downloading.value = downloading.value.filter(key => key !== downloadKey)
   }
@@ -219,303 +202,206 @@ const downloadDocument = async (docId, fileType) => {
 
 //删除文档
 const deleteDocument = async (docId) => {
+  const deleteKey = `${docId}_delete`
+  downloading.value.push(deleteKey)
   try {
-    const response = await axios.post('/translate/delete_translate_doc', {  
+    const response = await axios.post('/translate/delete_translate_doc', {
       doc_id: docId
     })
-    if (response==='ok') {
+    // 兼容多种返回格式
+    if (response.data === 'ok' || response.data?.code === 200 || response.data?.msg === 'success') {
       ElMessage.success('删除成功')
       fetchDocumentList()
     } else {
-      ElMessage.error('删除失败')
+      throw new Error(response.data?.msg || '删除失败')
     }
   } catch (err) {
-    ElMessage.error('删除失败')
-    console.error('Delete document error:', err)
+    ElMessage.error('删除过程中出现错误：' + (err.message || '未知错误'))
+  } finally {
+    downloading.value = downloading.value.filter(key => key !== deleteKey)
   }
 }
 
-// 页面加载时获取文档列表
 onMounted(() => {
   fetchDocumentList()
 })
 </script>
 
 <style scoped>
+.document-list-wrapper {
+  padding: 16px;
+  background-color: #f0f2f5;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.scientific-card {
+  background: #ffffff;
+  border: 1px solid #e4e7ed;
+  border-radius: 0;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  padding: 16px 24px;
+  border-bottom: 1px solid #ebeef5;
+  background-color: #fafbfc;
+  flex-shrink: 0;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-icon {
+  font-size: 20px;
+  color: #3f88f2;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
 }
 
 .header-buttons {
   display: flex;
-  gap: 1rem;
-  align-items: center;
+  gap: 12px;
 }
 
-.new-task-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease;
-}
-
-.new-task-button:hover {
-  background-color: #059669;
-}
-
-.refresh-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #667eea;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease;
-}
-
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-container {
-  background: white;
-  border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  width: 100%;
-  max-width: 56rem;
-  max-height: 90vh;
+.content-body {
+  padding: 16px 24px;
+  flex-grow: 1;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.document-table-wrapper {
+  flex-grow: 1;
   overflow: hidden;
-  animation: modalFadeIn 0.3s ease;
+  margin-top: 0;
 }
 
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 方正风格重置 */
+.square-btn {
+  border-radius: 0;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+.square-tag {
+  border-radius: 0;
 }
 
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
+.square-table :deep(.el-table__inner-wrapper) {
+  border-radius: 0;
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  transition: color 0.2s ease, background-color 0.2s ease;
-}
-
-.modal-close:hover {
-  color: #111827;
-  background-color: #f3f4f6;
-}
-
-.modal-body {
-  padding: 1rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-@media (max-width: 768px) {
-  .card-header {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-  }
-  
-  .header-buttons {
-    flex-direction: column;
-    gap: 0.5rem;
-    width: 100%;
-  }
-  
-  .new-task-button,
-  .refresh-button {
-    width: 100%;
-    justify-content: center;
-  }
-
-}
-
-/* 基础样式 */
-.document-list-container {
+:deep(.el-table) {
+  border-radius: 0;
   height: 100%;
-  padding: 2rem 1rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-.max-w-4xl {
-  margin: 0 auto;
+.square-table :deep(th.el-table__cell) {
+  background-color: #fafbfc !important;
 }
 
-/* 标题样式 */
-.text-center {
-  text-align: center;
-  margin-bottom: 2rem;
+.square-alert {
+  border-radius: 0;
+  margin-top: 12px;
+  flex-shrink: 0;
 }
 
-.text-3xl {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 0.5rem;
+:deep(.square-dialog) {
+  border-radius: 0;
 }
 
-.text-gray-100 {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1rem;
+:deep(.square-dialog .el-dialog__header) {
+  margin-right: 0;
+  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 15px;
 }
 
-/* 卡片头部样式 */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  margin-bottom: 1rem;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.refresh-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #667eea;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease;
-}
-
-.refresh-button:hover {
-  background-color: #5a67d8;
-}
-
-/* 加载状态 */
+/* 状态样式 */
 .loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
-  gap: 1rem;
+  flex-grow: 1;
+  padding: 60px 0;
+  gap: 12px;
 }
 
 .loading-icon {
-  font-size: 2rem;
-  color: #409eff;
-  animation: spin 1s linear infinite;
+  font-size: 32px;
+  color: #3f88f2;
 }
 
 .loading-text {
-  color: #6b7280;
-  font-size: 1rem;
+  color: #909399;
+  font-size: 14px;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 空状态 */
 .empty-state {
+  flex-grow: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
-  gap: 1rem;
-  color: #6b7280;
-}
-
-/* Element Plus 组件样式优化 */
-.document-table {
-  overflow-x: auto;
+  padding: 60px 0;
 }
 
 .action-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
   justify-content: center;
 }
 
 .no-action {
   color: #909399;
+  font-size: 13px;
   font-style: italic;
 }
 
-/* 错误提示 */
-.error-alert {
-  margin-top: 1rem;
-}
-
-/* 响应式设计 */
+/* 响应式适配 */
 @media (max-width: 768px) {
+  .document-list-wrapper {
+    padding: 8px;
+  }
+
   .card-header {
     flex-direction: column;
-    gap: 1rem;
-    text-align: center;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 12px;
   }
-  
+
+  .header-buttons {
+    width: 100%;
+  }
+
+  .header-buttons .el-button {
+    flex: 1;
+  }
+
+  .content-body {
+    padding: 12px;
+  }
+
   .action-buttons {
     flex-direction: column;
-    gap: 0.25rem;
   }
 }
 </style>

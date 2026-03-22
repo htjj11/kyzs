@@ -13,6 +13,9 @@
             {{ label.label_name }}
           </button>
         </div>
+        <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
+          <el-icon><Setting /></el-icon> 标签设置
+        </el-button>
       </div>
 
       <!-- 其他筛选条件 -->
@@ -219,13 +222,25 @@
       </div>
     </template>
   </el-dialog>
+
+  <!-- 标签设置弹窗 -->
+  <el-dialog v-model="showSettingLabelModal" title="标签设置" width="600px" append-to-body>
+    <setting-label />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="showSettingLabelModal = false">关闭</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import request from '@/api/request'
 import { ElMessage, ElMessageBox, ElSelect, ElOption, ElLoading } from 'element-plus'
+import { Setting } from '@element-plus/icons-vue'
 import ShowKnowledgeInfo from '@/components/small/show_knowledge_info.vue'
+import SettingLabel from '@/components/small/setting_label.vue'
 
 // 知识库列表数据
 const knowledgeList = ref([])
@@ -234,6 +249,7 @@ const error = ref('')
 
 // 标签列表数据
 const labelList = ref([])
+const showSettingLabelModal = ref(false)
 
 // 筛选条件
 const filters = ref({
@@ -855,6 +871,14 @@ const getTypeName = (typeId) => {
   margin: 16px 0;
   padding: 0 0 8px 0;
   border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-labels-btn {
+  margin-left: 16px;
+  font-weight: 500;
 }
 
 .label-tabs {
@@ -1005,6 +1029,7 @@ const getTypeName = (typeId) => {
 .item-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .action-btn {

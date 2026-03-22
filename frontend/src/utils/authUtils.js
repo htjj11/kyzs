@@ -39,16 +39,16 @@ export function getUserNameFromCookie() {
 /**
  * 设置cookie中的user_id
  * @param {number|null} userId 用户ID，设为null表示清除cookie
- * @param {number} days 过期时间（天）
+ * @param {number} minutes 过期时间（分钟）
  */
-export function setUserIdCookie(userId, days = 30) {
+export function setUserIdCookie(userId, minutes = 30) {
   if (userId === null) {
     // 清除cookie
     document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   } else {
     // 设置cookie
     const expires = new Date();
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    expires.setTime(expires.getTime() + minutes * 60 * 1000);
     document.cookie = `user_id=${userId}; expires=${expires.toUTCString()}; path=/;`;
   }
 }
@@ -56,16 +56,51 @@ export function setUserIdCookie(userId, days = 30) {
 /**
  * 设置user_name
  * @param {string} userName 用户名
+ * @param {number} minutes 过期时间（分钟）
  */
-export function setUserNameCookie(userName) {
+export function setUserNameCookie(userName, minutes = 30) {
   if (userName === null) {
     // 清除cookie
     document.cookie = 'user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   } else {
     // 设置cookie
     const expires = new Date();
-    expires.setTime(expires.getTime() + 1 * 24 * 60 * 60 * 1000);
+    expires.setTime(expires.getTime() + minutes * 60 * 1000);
     document.cookie = `user_name=${userName}; expires=${expires.toUTCString()}; path=/;`;
+  }
+}
+
+/**
+ * 设置截止日期（过期时间）
+ * @param {number|null} expireTime 时间戳，设为null表示清除cookie
+ * @param {number} minutes 过期时间（分钟）
+ */
+export function setExpireTimeCookie(expireTime, minutes = 30) {
+  if (expireTime === null) {
+    // 清除cookie
+    document.cookie = 'expire_time=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  } else {
+    // 设置cookie
+    const expires = new Date();
+    expires.setTime(expires.getTime() + minutes * 60 * 1000);
+    document.cookie = `expire_time=${expireTime}; expires=${expires.toUTCString()}; path=/;`;
+  }
+}
+
+/**
+ * 从cookie中获取截止日期
+ * @returns {number|null} 截止日期时间戳
+ */
+export function getExpireTimeFromCookie() {
+  try {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('expire_time='))
+      ?.split('=')[1];
+    return cookieValue ? parseInt(cookieValue) : null;
+  } catch (error) {
+    console.error('获取cookie中的expire_time失败:', error);
+    return null;
   }
 }
 
@@ -74,4 +109,6 @@ export function setUserNameCookie(userName) {
  */
 export function logoutUser() {
   setUserIdCookie(null);
+  setUserNameCookie(null);
+  setExpireTimeCookie(null);
 }

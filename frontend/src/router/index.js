@@ -11,22 +11,15 @@ import patentSearch from "@/components/baogao/patent_search.vue";
 import webinfoSearch from "@/components/baogao/webinfo_search.vue";
 import fileUpload from "@/components/baogao/file_upload.vue";
 import zskck from "@/components/baogao/5zskck.vue";
-import zsck from "@/components/baogao/zsck.vue";
-import zsck2 from "@/components/baogao/zsck2.vue";
+import report_view from "@/components/baogao/report_view.vue";
 import new_editor from "@/components/baogao/new_editor.vue";
-
-
-import qtsz from "@/components/qtsz.vue";
 
 import wbfy from "@/components/fanyi/wbfy.vue";
 import wdfy from "@/components/fanyi/wdfy.vue";
 import ckgl from "@/components/fanyi/ckgl.vue";
+import public_db from "@/components/public_db/public_db.vue";
 
 
-
-import wenda from "@/components/wenda/wenda.vue";
-import db_manage from "@/components/wenda/db_manage.vue";
-import all_db from "@/components/wenda/all_db.vue";
 
 // 检查用户是否已登录的函数
 const isUserLoggedIn = () => {
@@ -46,7 +39,7 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/wxjs'
+      redirect: '/literatureSearch'
     },
     {
       //文献搜索
@@ -70,27 +63,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/zsck',
-      name: 'zsck',
-      component: zsck,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/zsck2',
-      name: 'zsck2',
-      component: zsck2,
+      path: '/report_view',
+      name: 'report_view',
+      component: report_view,
       meta: { requiresAuth: true }
     },
     {
       path: '/zskck',
       name: 'zskck',
       component: zskck,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/qtsz',
-      name: 'qtsz',
-      component: qtsz,
       meta: { requiresAuth: true }
     },
     {
@@ -118,23 +99,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/wenda',
-      name: 'wenda',
-      component: wenda,
+      path: '/public_db',
+      name: 'public_db',
+      component: public_db,
       meta: { requiresAuth: true }
     },
-    {
-      path: '/db_manage',
-      name: 'db_manage',
-      component: db_manage,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/all_db',
-      name: 'all_db',
-      component: all_db,
-      meta: { requiresAuth: true }
-    },
+
     // 捕获所有未匹配的路由，重定向到登录页面
     {
       path: '/:pathMatch(.*)*',

@@ -10,25 +10,20 @@
 
     <!-- 搜索区域：未搜索时居中，搜索后收缩到顶部 -->
     <div class="search-area">
-      <!-- 未搜索时显示的大标题 -->
-      <transition name="title-fade">
-        <div v-if="!searched" class="hero-title">
-          <span class="hero-icon">📄</span>
-          <span>文献检索</span>
-        </div>
-      </transition>
-
       <div class="search-form">
         <div class="form-row">
           <div class="form-item">
             <label>关键词：</label>
-            <el-input v-model="keywords" placeholder="多个关键词用逗号分隔" style="width: 300px" clearable @keyup.enter="doSearch" />
+            <el-input v-model="keywords" placeholder="多个关键词用逗号分隔" style="width: 300px" clearable
+              @keyup.enter="doSearch" />
           </div>
           <div class="form-item">
             <label>年份：</label>
-            <el-input-number v-model="startYear" :min="1800" :max="currentYear" placeholder="起始" controls-position="right" style="width:120px" />
+            <el-input-number v-model="startYear" :min="1800" :max="currentYear" placeholder="起始"
+              controls-position="right" style="width:120px" />
             <span class="year-sep">—</span>
-            <el-input-number v-model="endYear" :min="1800" :max="currentYear" placeholder="结束" controls-position="right" style="width:120px" />
+            <el-input-number v-model="endYear" :min="1800" :max="currentYear" placeholder="结束" controls-position="right"
+              style="width:120px" />
           </div>
           <div class="form-actions">
             <el-button type="primary" :loading="loading" @click="doSearch">搜索</el-button>
@@ -54,7 +49,8 @@
           <el-table-column prop="doi" label="DOI" width="160" show-overflow-tooltip />
           <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
-              <el-button v-if="row.download_url" type="warning" size="small" @click="openUrl(row.download_url)" style="margin-right:4px">下载</el-button>
+              <el-button v-if="row.download_url" type="warning" size="small" @click="openUrl(row.download_url)"
+                style="margin-right:4px">下载</el-button>
               <span v-if="row.is_collected === 1" class="collected-text">已收藏</span>
               <el-button v-else type="primary" size="small" @click="handleCollect(row)">收藏</el-button>
             </template>
@@ -210,7 +206,8 @@ const openUrl = (url) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;   /* 搜索前：垂直居中 */
+  justify-content: center;
+  /* 搜索前：垂直居中 */
   height: 100%;
   padding: 24px 24px;
   box-sizing: border-box;
@@ -254,7 +251,10 @@ const openUrl = (url) => {
   margin-bottom: 28px;
   letter-spacing: 1px;
 }
-.hero-icon { font-size: 36px; }
+
+.hero-icon {
+  font-size: 36px;
+}
 
 /* ===== 搜索表单 ===== */
 .search-form {
@@ -262,20 +262,45 @@ const openUrl = (url) => {
   background: #fff;
   padding: 12px 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.10);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .10);
   transition: box-shadow 0.3s ease, border-radius 0.3s ease;
 }
 
 .has-result .search-form {
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
   border-radius: 6px;
 }
 
-.form-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.form-item { display: flex; align-items: center; gap: 6px; }
-.form-item label { font-weight: 500; color: #606266; white-space: nowrap; }
-.form-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-.year-sep { margin: 0 4px; color: #999; }
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-item label {
+  font-weight: 500;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.form-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.year-sep {
+  margin: 0 4px;
+  color: #999;
+}
 
 /* ===== 数据区 ===== */
 .data-section {
@@ -285,7 +310,7 @@ const openUrl = (url) => {
   background: #fff;
   padding: 12px 16px;
   border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
   overflow: hidden;
   min-height: 0;
   width: 100%;
@@ -295,9 +320,15 @@ const openUrl = (url) => {
   flex: 1;
   height: 0 !important;
 }
-:deep(.el-table__body-wrapper) { overflow-y: auto; }
 
-.collected-text { color: #67c23a; font-size: 13px; }
+:deep(.el-table__body-wrapper) {
+  overflow-y: auto;
+}
+
+.collected-text {
+  color: #67c23a;
+  font-size: 13px;
+}
 
 /* ===== 分页 ===== */
 .pagination-box {
@@ -308,9 +339,22 @@ const openUrl = (url) => {
   margin-top: 10px;
   justify-content: center;
 }
-.page-info { font-size: 14px; color: #606266; min-width: 60px; text-align: center; }
-.page-sep { color: #ddd; }
-.page-label { font-size: 13px; color: #909399; }
+
+.page-info {
+  font-size: 14px;
+  color: #606266;
+  min-width: 60px;
+  text-align: center;
+}
+
+.page-sep {
+  color: #ddd;
+}
+
+.page-label {
+  font-size: 13px;
+  color: #909399;
+}
 
 /* ===== 加载遮罩 ===== */
 .loading-overlay {
@@ -325,6 +369,7 @@ const openUrl = (url) => {
   background: rgba(244, 246, 248, 0.88);
   backdrop-filter: blur(2px);
 }
+
 .loading-spinner {
   width: 44px;
   height: 44px;
@@ -333,26 +378,63 @@ const openUrl = (url) => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
 .loading-text {
   font-size: 14px;
   color: #1a2b4a;
   font-weight: 500;
   letter-spacing: 0.5px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ===== 过渡动画 ===== */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
 
-.title-fade-enter-active { transition: opacity 0.3s ease, transform 0.3s ease; }
-.title-fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
-.title-fade-enter-from { opacity: 0; transform: translateY(-10px); }
-.title-fade-leave-to { opacity: 0; transform: translateY(-10px); }
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
-.result-fade-enter-active { transition: opacity 0.35s ease 0.1s, transform 0.35s ease 0.1s; }
-.result-fade-leave-active { transition: opacity 0.2s ease; }
-.result-fade-enter-from { opacity: 0; transform: translateY(12px); }
-.result-fade-leave-to { opacity: 0; }
+.title-fade-enter-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.title-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.title-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.title-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.result-fade-enter-active {
+  transition: opacity 0.35s ease 0.1s, transform 0.35s ease 0.1s;
+}
+
+.result-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.result-fade-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.result-fade-leave-to {
+  opacity: 0;
+}
 </style>
-

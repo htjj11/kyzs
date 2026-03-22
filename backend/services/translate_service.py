@@ -112,22 +112,37 @@ def translate_text_api(raw_text: str, translate_type: str, field_id: int):
 
 def translate_text_list_api(raw_text_list: list, translate_type: str, field_id: int):
     """
-    多段文本并发翻译，使用线程池保持段落顺序。
-    用于 PDF 文档逐段翻译场景，段落数量可能达到数百条。
+    分批并发翻译，规避 API 频控：
+    1. 每 5 个段落为一组合并行翻译。
+    2. 每执行完一批后等待 2 秒再开始下一批。
     """
     results = [None] * len(raw_text_list)
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {
-            executor.submit(translate_text_api, text, translate_type, field_id): i
-            for i, text in enumerate(raw_text_list)
-        }
-        for future in concurrent.futures.as_completed(futures):
-            i = futures[future]
-            try:
-                results[i] = future.result()['translate_result']
-            except Exception as e:
-                print(f"翻译出错: {e}")
-                results[i] = "该段翻译失败"
+    batch_size = 5
+    
+    for start_idx in range(0, len(raw_text_list), batch_size):
+        end_idx = min(start_idx + batch_size, len(raw_text_list))
+        current_batch = raw_text_list[start_idx:end_idx]
+        
+        print(f"开始翻译批次: {start_idx} 到 {end_idx-1}")
+        
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(translate_text_api, text, translate_type, field_id): i
+                for i, text in enumerate(current_batch)
+            }
+            for future in concurrent.futures.as_completed(futures):
+                batch_rel_idx = futures[future]
+                try:
+                    results[start_idx + batch_rel_idx] = future.result()['translate_result']
+                except Exception as e:
+                    print(f"翻译第 {start_idx + batch_rel_idx} 段出错: {e}")
+                    results[start_idx + batch_rel_idx] = "该段翻译失败"
+        
+        # 如果不是最后一批，则等待 2 秒
+        if end_idx < len(raw_text_list):
+            print("批次执行完成，等待 2 秒...")
+            time.sleep(2)
+            
     return results
 
 
@@ -137,7 +152,7 @@ def create_new_translate_doc_mission(base64_pdf_string, topic, user_id):
     执行完成后将翻译产物写入 ./file/ 目录，并将文件路径回写数据库（status=1 表示完成）。
     """
     sqlite_execute(
-        "INSERT INTO translate_doc (name, status, raw_base64, user_id) VALUES (%s, 0, %s, %s)",
+        "INSERT INTO translate_doc (name, status, raw_base64, user_id) VALUES (?, 0, ?, ?)",
         (topic, base64_pdf_string, user_id)
     )
     mission = sqlite_execute("SELECT id FROM translate_doc ORDER BY id DESC LIMIT 1")
@@ -147,14 +162,14 @@ def create_new_translate_doc_mission(base64_pdf_string, topic, user_id):
     file_name = time.strftime("%Y%m%d%H%M%S", time.localtime())
 
     # 翻译产物存本地 ./file/ 目录，数据库只存路径
-    with open(f'./file/{file_name}.pdf', 'wb') as f:
+    with open(f'./file_data/{file_name}.pdf', 'wb') as f:
         f.write(base64.b64decode(output_pdf_base64))
-    with open(f'./file/{file_name}.docx', 'wb') as f:
+    with open(f'./file_data/{file_name}.docx', 'wb') as f:
         f.write(base64.b64decode(output_docx_base64))
-
+ 
     sqlite_execute(
-        "UPDATE translate_doc SET status=1, output_pdf_base64=%s, output_docx_base64=%s WHERE id=%s",
-        (f'./file/{file_name}.pdf', f'./file/{file_name}.docx', mission_id)
+        "UPDATE translate_doc SET status=1, output_pdf_base64=?, output_docx_base64=? WHERE id=?",
+        (f'./file_data/{file_name}.pdf', f'./file_data/{file_name}.docx', mission_id)
     )
     print('翻译任务id成功:', mission_id)
     return 'ok'
@@ -169,7 +184,7 @@ def translate_pdf(base64_pdf_string):
         4. 并发翻译所有段落
         5. 将译文写回 docx，保持原始排版
         6. docx2pdf 转换为 PDF（Windows 依赖 Word，Linux 依赖 LibreOffice）
-    """
+    """ 
     from pdf2docx import parse
     from docx import Document
     from docx2pdf import convert
@@ -229,7 +244,7 @@ def translate_pdf(base64_pdf_string):
 
 def get_all_translate_doc_list_api(user_id):
     res = sqlite_execute(
-        "SELECT id, name, status FROM translate_doc WHERE user_id=%s", (user_id,)
+        "SELECT id, name, status FROM translate_doc WHERE user_id=?", (user_id,)
     )
     return {'translate_doc_list': res}
 
@@ -237,7 +252,7 @@ def get_all_translate_doc_list_api(user_id):
 def get_translate_doc_detail_api(doc_id):
     # 数据库只存文件路径，读取时从磁盘读取并转 base64 返回前端
     res = sqlite_execute(
-        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=%s", (doc_id,)
+        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=?", (doc_id,)
     )[0]
     with open(res['output_pdf_base64'], 'rb') as f:
         pdf_b64 = base64.b64encode(f.read()).decode('utf-8')
@@ -248,18 +263,18 @@ def get_translate_doc_detail_api(doc_id):
 
 def del_translate_doc_api(doc_id):
     res = sqlite_execute(
-        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=%s", (doc_id,)
+        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=?", (doc_id,)
     )[0]
     os.remove(res['output_pdf_base64'])
     os.remove(res['output_docx_base64'])
-    sqlite_execute("DELETE FROM translate_doc WHERE id=%s", (doc_id,))
+    sqlite_execute("DELETE FROM translate_doc WHERE id=?", (doc_id,))
     return 'ok'
 
 
 def get_translate_word_by_content_api(content1: str):
     # LIKE 模糊查询同时搜索原文（content1）和译文（content2），LIMIT 50 防止返回过多
     res = sqlite_execute(
-        "SELECT * FROM translate_words WHERE content1 LIKE %s OR content2 LIKE %s LIMIT 50",
+        "SELECT * FROM translate_words WHERE content1 LIKE ? OR content2 LIKE ? LIMIT 50",
         (f'%{content1}%', f'%{content1}%')
     )
     if res:
@@ -270,7 +285,7 @@ def get_translate_word_by_content_api(content1: str):
 def add_translate_word_api(ts_type: str, field_id: int, content1: str, content2: str, content3: str, from_source: str):
     try:
         sqlite_execute(
-            "INSERT INTO translate_words (ts_type, field_id, content1, content2, content3, `from`) VALUES (%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO translate_words (ts_type, field_id, content1, content2, content3, `from`) VALUES (?,?,?,?,?,?)",
             (ts_type, field_id, content1, content2, content3, from_source)
         )
         new_id = sqlite_execute("SELECT id FROM translate_words ORDER BY id DESC LIMIT 1")[0]['id']
@@ -288,17 +303,17 @@ def update_translate_word_api(word_id: int, ts_type: str = None, field_id: int =
     """
     fields, params = [], []
     if ts_type is not None:
-        fields.append("ts_type=%s"); params.append(ts_type)
+        fields.append("ts_type=?"); params.append(ts_type)
     if field_id is not None:
-        fields.append("field_id=%s"); params.append(field_id)
+        fields.append("field_id=?"); params.append(field_id)
     if content1 is not None:
-        fields.append("content1=%s"); params.append(content1)
+        fields.append("content1=?"); params.append(content1)
     if content2 is not None:
-        fields.append("content2=%s"); params.append(content2)
+        fields.append("content2=?"); params.append(content2)
     if content3 is not None:
-        fields.append("content3=%s"); params.append(content3)
+        fields.append("content3=?"); params.append(content3)
     if from_source is not None:
-        fields.append("`from`=%s"); params.append(from_source)
+        fields.append("`from`=?"); params.append(from_source)
 
     if not fields:
         return {'code': 400, 'msg': '没有提供要更新的字段', 'data': None}
@@ -306,7 +321,7 @@ def update_translate_word_api(word_id: int, ts_type: str = None, field_id: int =
     params.append(word_id)
     try:
         sqlite_execute(
-            f"UPDATE translate_words SET {', '.join(fields)} WHERE id=%s",
+            f"UPDATE translate_words SET {', '.join(fields)} WHERE id=?",
             tuple(params)
         )
         return {'code': 200, 'msg': 'success', 'data': None}
@@ -316,7 +331,7 @@ def update_translate_word_api(word_id: int, ts_type: str = None, field_id: int =
 
 def delete_translate_word_api(word_id: int):
     try:
-        sqlite_execute("DELETE FROM translate_words WHERE id=%s", (word_id,))
+        sqlite_execute("DELETE FROM translate_words WHERE id=?", (word_id,))
         return {'code': 200, 'msg': 'success', 'data': None}
     except Exception as e:
         return {'code': 500, 'msg': f'删除失败: {str(e)}', 'data': None}

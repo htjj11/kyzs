@@ -4,11 +4,15 @@
       <h2>翻译词库</h2>
       <div class="header-actions">
         <el-button type="primary" @click="showAddDialog = true">
-          <el-icon><Plus /></el-icon>
+          <el-icon>
+            <Plus />
+          </el-icon>
           添加词汇
         </el-button>
         <el-button @click="exportWords">
-          <el-icon><Download /></el-icon>
+          <el-icon>
+            <Download />
+          </el-icon>
           导出词库
         </el-button>
       </div>
@@ -18,14 +22,11 @@
     <div class="search-section">
       <el-row :gutter="20">
         <el-col :span="6">
-          <el-input
-            v-model="searchWord"
-            placeholder="输入关键字模糊匹配"
-            clearable
-            @input="handleSearch"
-          >
+          <el-input v-model="searchWord" placeholder="输入关键字模糊匹配" clearable @input="handleSearch">
             <template #prefix>
-              <el-icon><Search /></el-icon>
+              <el-icon>
+                <Search />
+              </el-icon>
             </template>
           </el-input>
         </el-col>
@@ -41,7 +42,9 @@
         </el-col>
         <el-col :span="4">
           <el-button type="primary" @click="lookupWord">
-            <el-icon><Search /></el-icon>
+            <el-icon>
+              <Search />
+            </el-icon>
             查词
           </el-button>
         </el-col>
@@ -50,13 +53,7 @@
 
     <!-- 词汇表格 -->
     <div class="table-section">
-      <el-table 
-        :data="wordList" 
-        stripe 
-        border 
-        style="width: 100%"
-        :loading="loading"
-      >
+      <el-table :data="wordList" stripe border style="width: 100%" :loading="loading">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="ts_type" label="翻译类型" width="120" />
         <el-table-column prop="field_id" label="领域" width="100">
@@ -79,30 +76,14 @@
 
     <!-- 分页 -->
     <div class="pagination-section">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="totalCount"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
+      <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+        :total="totalCount" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
+        @current-change="handleCurrentChange" />
     </div>
 
     <!-- 添加/编辑对话框 -->
-    <el-dialog
-      v-model="showAddDialog"
-      :title="isEdit ? '编辑词汇' : '添加词汇'"
-      width="800px"
-      @close="resetForm"
-    >
-      <el-form
-        ref="wordFormRef"
-        :model="wordForm"
-        :rules="wordRules"
-        label-width="120px"
-      >
+    <el-dialog v-model="showAddDialog" :title="isEdit ? '编辑词汇' : '添加词汇'" width="800px" @close="resetForm">
+      <el-form ref="wordFormRef" :model="wordForm" :rules="wordRules" label-width="120px">
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="翻译类型" prop="ts_type">
@@ -119,41 +100,24 @@
             </el-form-item>
           </el-col>
         </el-row>
-        
+
         <el-form-item label="词汇内容" prop="content1">
-          <el-input 
-            v-model="wordForm.content1" 
-            placeholder="请输入词汇（通常为英文）"
-            @blur="autoLookup"
-          />
+          <el-input v-model="wordForm.content1" placeholder="请输入词汇（通常为英文）" @blur="autoLookup" />
         </el-form-item>
-        
+
         <el-form-item label="词汇释义" prop="content2">
-          <el-input 
-            v-model="wordForm.content2" 
-            type="textarea" 
-            :rows="3"
-            placeholder="请输入词汇释义（通常为中文）"
-          />
+          <el-input v-model="wordForm.content2" type="textarea" :rows="3" placeholder="请输入词汇释义（通常为中文）" />
         </el-form-item>
-        
+
         <el-form-item label="用法说明" prop="content3">
-          <el-input 
-            v-model="wordForm.content3" 
-            type="textarea" 
-            :rows="4"
-            placeholder="请输入用法说明、注释等"
-          />
+          <el-input v-model="wordForm.content3" type="textarea" :rows="4" placeholder="请输入用法说明、注释等" />
         </el-form-item>
-        
+
         <el-form-item label="词汇来源" prop="from">
-          <el-input 
-            v-model="wordForm.from" 
-            placeholder="请输入该词汇的来源"
-          />
+          <el-input v-model="wordForm.from" placeholder="请输入该词汇的来源" />
         </el-form-item>
       </el-form>
-      
+
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="showAddDialog = false">取消</el-button>
@@ -169,12 +133,12 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  Plus, 
-  Search, 
-  Download, 
-  Edit, 
-  Delete 
+import {
+  Plus,
+  Search,
+  Download,
+  Edit,
+  Delete
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
 
@@ -249,7 +213,7 @@ const fetchWordList = async (isSearch = false) => {
         ts_type: selectedType.value,
         field_id: selectedField.value
       }
-      
+
       // 移除空值参数
       const cleanParams = {}
       Object.keys(params).forEach(key => {
@@ -257,10 +221,10 @@ const fetchWordList = async (isSearch = false) => {
           cleanParams[key] = params[key]
         }
       })
-      
+
       // 调用获取词汇列表接口，不分页获取所有数据
       const response = await request.post('/translate/get_translate_word_list', cleanParams)
-      
+
       if (response.data.code === 200) {
         allSearchResults.value = response.data.data.list || []
         totalCount.value = response.data.data.total || 0
@@ -270,12 +234,12 @@ const fetchWordList = async (isSearch = false) => {
         totalCount.value = 0
       }
     }
-    
+
     // 客户端分页显示当前页数据
     const start = (currentPage.value - 1) * pageSize.value
     const end = start + pageSize.value
     wordList.value = allSearchResults.value.slice(start, end)
-    
+
   } catch (error) {
     if (isSearch) {
       ElMessage.error('搜索失败')
@@ -289,7 +253,7 @@ const fetchWordList = async (isSearch = false) => {
   }
 }
 
- 
+
 // 查词功能 - 使用统一的搜索逻辑
 const lookupWord = async () => {
   if (!searchWord.value.trim()) {
@@ -303,22 +267,22 @@ const lookupWord = async () => {
     const response = await request.post('/translate/get_translate_word_by_content', {
       content1: searchWord.value.trim()
     })
-    
-    console.log('查词词典接口返回数据:', response.data)
+
+    console.log('查词词库接口返回数据:', response.data)
     if (response.data['code'] === 200) {
-        const data = response.data['data']
-        console.log('查词词典接口返回数据:', data)
+      const data = response.data['data']
+      console.log('查词词库接口返回数据:', data)
       if (data && data.length > 0) {
         // 保存搜索结果到allSearchResults，使用统一的分页逻辑
         allSearchResults.value = data
         totalCount.value = data.length
         currentPage.value = 1 // 重置到第一页
-        
+
         // 客户端分页显示第一页数据
         const start = (currentPage.value - 1) * pageSize.value
         const end = start + pageSize.value
         wordList.value = allSearchResults.value.slice(start, end)
-        
+
         ElMessage.success(`找到 ${data.length} 个相关词汇`)
       } else {
         // 未找到结果，清空数据
@@ -379,12 +343,12 @@ const deleteWord = async (row) => {
         type: 'warning'
       }
     )
-    
+
     // 调用删除词汇接口
     const response = await request.post('/translate/delete_translate_word', {
       word_id: row.id
     })
-    
+
     if (response.data.code === 200) {
       ElMessage.success('删除成功')
     } else {
@@ -400,10 +364,10 @@ const deleteWord = async (row) => {
 // 保存词汇
 const saveWord = async () => {
   if (!wordFormRef.value) return
-  
+
   try {
     await wordFormRef.value.validate()
-    
+
     if (isEdit.value) {
       // 更新词汇 - 调用更新词汇接口
       const updateData = {
@@ -415,9 +379,9 @@ const saveWord = async () => {
         content3: wordForm.content3,
         from_source: wordForm.from  // 注意：后端接口使用from_source参数
       }
-      
+
       const response = await request.post('/translate/update_translate_word', updateData)
-      
+
       if (response.data.code === 200) {
         ElMessage.success('词汇更新成功')
       } else {
@@ -434,9 +398,9 @@ const saveWord = async () => {
         content3: wordForm.content3,
         from_source: wordForm.from  // 注意：后端接口使用from_source参数
       }
-      
+
       const response = await request.post('/translate/add_translate_word', addData)
-      
+
       if (response.data.code === 200) {
         ElMessage.success('词汇添加成功')
       } else {
@@ -444,7 +408,7 @@ const saveWord = async () => {
         return
       }
     }
-    
+
     showAddDialog.value = false
     resetForm()
     // 如果当前有搜索结果，重新搜索以更新数据
@@ -510,25 +474,31 @@ onMounted(() => {
 
 <style scoped>
 .word-library-container {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: 100vh;
+  padding: 16px;
+  background-color: #f0f2f5;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+  padding: 16px 20px;
+  background: #fafbfc;
+  border: 1px solid #ebeef5;
+  border-radius: 0;
+  flex-shrink: 0;
 }
 
 .header h2 {
   margin: 0;
   color: #303133;
+  font-size: 18px;
   font-weight: 600;
 }
 
@@ -539,27 +509,38 @@ onMounted(() => {
 
 .search-section {
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 0;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .table-section {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 12px;
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.el-table) {
+  border-radius: 0;
+  height: 100%;
 }
 
 .pagination-section {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #fafbfc;
+  padding: 12px 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .dialog-footer {
@@ -568,48 +549,72 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 表格样式优化 */
-:deep(.el-table) {
-  border-radius: 8px;
+/* 按钮样式优化 - 方正风格 */
+:deep(.el-button) {
+  border-radius: 0;
 }
 
+:deep(.el-input__wrapper),
+:deep(.el-select__wrapper) {
+  border-radius: 0;
+}
+
+/* 表格样式优化 */
 :deep(.el-table th) {
-  background-color: #fafafa;
-  color: #606266;
+  background-color: #fafbfc;
+  color: #303133;
   font-weight: 600;
 }
 
 /* 对话框样式 */
-:deep(.el-dialog__body) {
-  padding: 20px;
+:deep(.el-dialog) {
+  border-radius: 0;
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 20px;
+:deep(.el-dialog__header) {
+  margin-right: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #ebeef5;
+  background-color: #fafbfc;
+}
+
+:deep(.el-dialog__title) {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+:deep(.el-dialog__body) {
+  padding: 24px 20px;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .word-library-container {
-    padding: 10px;
+    padding: 8px;
   }
-  
+
   .header {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     align-items: stretch;
+    padding: 12px;
   }
-  
+
   .header-actions {
     justify-content: center;
   }
-  
-  .search-section .el-row {
-    flex-direction: column;
+
+  .search-section {
+    padding: 12px;
   }
-  
+
   .search-section .el-col {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+  }
+
+  .pagination-section {
+    padding: 10px;
+    justify-content: center;
   }
 }
 </style>

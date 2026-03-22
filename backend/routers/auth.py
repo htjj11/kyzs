@@ -27,3 +27,4 @@ async def login_api(
         return {"code": 200, "msg": 'success', "data": {"user_id": user_result[0]['id'], "user_name": username}}
     else:
         return {"code": 400, "msg": 'fail', "data": {"msg": "用户名或密码错误"}}
+ 

@@ -10,9 +10,8 @@ from routers import (
     review,
     translate,
     auth,
-    chat,
 )
-from services.literature_service import delete_summary
+from services.report_service import delete_summary
 
 app = FastAPI(title="科研助手后端", version="2.0.0")
 
@@ -31,7 +30,7 @@ app.include_router(knowledge.router)
 app.include_router(review.router)
 app.include_router(translate.router)
 app.include_router(auth.router)
-app.include_router(chat.router)
+ 
 
 executor = ThreadPoolExecutor()
 

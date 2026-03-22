@@ -4,7 +4,7 @@
     <div v-if="loading" class="loading-container">
       <el-loading-spinner /> 正在基于大模型+知识库生成内容,请稍后...
     </div>
-    
+
     <!-- 内容区域 -->
     <div v-else class="ai-reference-content">
       <!-- 三步水平布局 -->
@@ -12,78 +12,50 @@
         <!-- 第一步：选择知识库内容 -->
         <div class="step-container">
           <h3 class="step-title">第一步:选择知识库内容</h3>
-          
+
           <!-- 筛选条件区域 -->
           <div class="filter-container">
             <div class="filter-row">
-              <el-input 
-                v-model="filterTitle" 
-                placeholder="标题关键字" 
-                clearable 
-                style="width: 100%; margin-bottom: 8px;"
-              />
-              <el-input 
-                v-model="filterContent" 
-                placeholder="内容关键字" 
-                clearable 
-                style="width: 100%; margin-bottom: 8px;"
-              />
-              <el-select 
-                v-model="filterLabelName" 
-                placeholder="标签名称" 
-                clearable 
-                style="width: 100%; margin-bottom: 8px;"
-              >
-                <el-option 
-                  v-for="label in uniqueLabels" 
-                  :key="label" 
-                  :label="label" 
-                  :value="label"
-                />
+              <el-input v-model="filterTitle" placeholder="标题关键字" clearable class="filter-input-item"
+                @input="applyFilter" />
+              <el-input v-model="filterContent" placeholder="内容关键字" clearable class="filter-input-item"
+                @input="applyFilter" />
+              <el-select v-model="filterLabelName" placeholder="标签名称" clearable class="filter-input-item"
+                @change="applyFilter">
+                <el-option v-for="label in uniqueLabels" :key="label" :label="label" :value="label" />
               </el-select>
-              <el-select 
-                v-model="filterTypeId" 
-                placeholder="类型" 
-                clearable 
-                style="width: 100%; margin-bottom: 8px;"
-              >
-                <el-option 
-                  v-for="option in typeOptions" 
-                  :key="option.value" 
-                  :label="option.label" 
-                  :value="option.value"
-                />
+              <el-select v-model="filterTypeId" placeholder="类型" clearable class="filter-input-item"
+                @change="applyFilter">
+                <el-option v-for="option in typeOptions" :key="option.value" :label="option.label"
+                  :value="option.value" />
               </el-select>
-              <el-button @click="applyFilter" style="width: 100%;">筛选</el-button>
             </div>
           </div>
           <!-- 知识库内容列表 -->
           <div class="knowledge-list-container">
             <el-checkbox-group v-model="selectedKnowledgeIds">
-              <el-checkbox 
-                v-for="knowledge in filteredKnowledgeList" 
-                :key="knowledge.id" 
-                :label="knowledge.id"
-                style="display: block; margin-bottom: 12px;"
-              >
+              <el-checkbox v-for="knowledge in filteredKnowledgeList" :key="knowledge.id" :label="knowledge.id"
+                class="knowledge-checkbox">
                 <div class="knowledge-item">
                   <div class="knowledge-title">{{ knowledge.title }}</div>
                   <div class="knowledge-meta">
-                    <span>内容: {{ knowledge.content && knowledge.content.length > 30 ? knowledge.content.substring(0, 30) + '...' : knowledge.content }}</span>
-                    <span>注释: {{ knowledge.mark_info}}</span>
+                    <span>内容: {{ knowledge.content && knowledge.content.length > 30 ? knowledge.content.substring(0, 30)
+                      + '...' : knowledge.content }}</span>
+                    <span>注释: {{ knowledge.mark_info && knowledge.mark_info.length > 30 ?
+                      knowledge.mark_info.substring(0, 30) + '...' : knowledge.mark_info }}</span>
                     <span>标签: {{ knowledge.label_name }}</span>
                   </div>
                 </div>
               </el-checkbox>
             </el-checkbox-group>
           </div>
-          
+
           <!-- 已选择内容信息 -->
           <div class="selected-info">
             <h4>已选择 {{ selectedKnowledgeIds.length }} 项</h4>
             <div v-if="selectedKnowledgeIds.length > 0" class="selected-list">
-              <div v-for="id in selectedKnowledgeIds" :key="id" class="selected-item">
-                {{ getKnowledgeTitleById(id) }}
+              <div class="selected-item-text">
+                {{selectedKnowledgeIds.map(id => getKnowledgeTitleById(id)).join('；')}}
               </div>
             </div>
           </div>
@@ -91,37 +63,24 @@
 
         <!-- 第二步：选择预设提示词 -->
         <div class="step-container">
-          <h3 class="step-title">第二步:选择预设提示词</h3>
+          <div class="step-header">
+            <h3 class="step-title">第二步:选择预设提示词</h3>
+            <el-button type="primary" link @click="showSettingFormatModal = true" class="setting-btn">
+              <el-icon><Setting /></el-icon> 提示词设置
+            </el-button>
+          </div>
           <div class="prompt-filter-row">
-            <el-input 
-              v-model="filterPromptName" 
-              placeholder="提示词名称关键字" 
-              clearable 
-              style="width: 100%; margin-bottom: 8px;"
-            />
-            <el-select 
-              v-model="filterPromptType" 
-              placeholder="提示词类型" 
-              clearable 
-              style="width: 100%; margin-bottom: 8px;"
-            >
-              <el-option 
-                v-for="type in uniquePromptTypes" 
-                :key="type" 
-                :label="type" 
-                :value="type"
-              />
+            <el-input v-model="filterPromptName" placeholder="提示词名称关键字" clearable class="filter-input-item"
+              @input="applyPromptFilter" />
+            <el-select v-model="filterPromptType" placeholder="提示词类型" clearable class="filter-input-item"
+              @change="applyPromptFilter">
+              <el-option v-for="type in uniquePromptTypes" :key="type" :label="type" :value="type" />
             </el-select>
-            <el-button @click="applyPromptFilter" style="width: 100%;">筛选</el-button>
           </div>
           <div class="prompt-list-container">
             <el-checkbox-group v-model="selectedPromptIds">
-              <el-checkbox 
-                v-for="promptItem in filteredPromptList" 
-                :key="promptItem.id" 
-                :label="promptItem.id" 
-                style="display: block; margin-bottom: 8px;"
-              >
+              <el-checkbox v-for="promptItem in filteredPromptList" :key="promptItem.id" :label="promptItem.id"
+                style="display: block; margin-bottom: 8px;">
                 <div class="prompt-item">
                   <div class="prompt-name">{{ promptItem.name }}</div>
                   <div class="prompt-type">类型: {{ promptItem.type }}</div>
@@ -135,14 +94,11 @@
         <div class="step-container">
           <h3 class="step-title">第三步:输入需求</h3>
           <div class="demand-container">
-            <el-input 
-              v-model="inputDemand" 
-              placeholder="请输入需求" 
-              clearable 
-              type="textarea"
-              :rows="6"
-              style="width: 100%; height: 100%;"
-            />
+            <div v-if="props.selectedText" style="margin-bottom: 8px;">
+              <el-checkbox v-model="quoteOriginalText" @change="handleQuoteChange">引用选中原文</el-checkbox>
+            </div>
+            <el-input v-model="inputDemand" placeholder="请输入需求" clearable type="textarea" :rows="6"
+              style="width: 100%; height: 100%;" />
           </div>
         </div>
       </div>
@@ -156,13 +112,24 @@
       </div>
     </div>
   </div>
+  <!-- 提示词格式设置弹窗 -->
+  <el-dialog v-model="showSettingFormatModal" title="提示词设置" width="800px" append-to-body>
+    <setting-format />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="showSettingFormatModal = false">关闭</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
+import { Setting } from '@element-plus/icons-vue';
 import request from '@/api/request';
 import { getUserIdFromCookie } from '@/utils/authUtils';
+import SettingFormat from '@/components/small/setting_format.vue';
 
 // 定义props
 const props = defineProps({
@@ -192,14 +159,35 @@ const filterTypeId = ref(''); // 类型ID筛选
 const promptList = ref([]); // 提示词列表
 const filteredPromptList = ref([]); // 筛选后的提示词列表
 const selectedPromptIds = ref([]); // 选中的提示词ID
-const inputDemand = ref(''); // 用户输入的需求
+const inputDemand = ref(  ''); // 用户输入的需求
+const quoteOriginalText = ref(false); // 是否引用原文
+const showSettingFormatModal = ref(false); // 是否显示提示词设置弹窗
 
 // 筛选条件
 
 
- 
+
 const filterPromptName = ref(''); // 提示词名称筛选
 const filterPromptType = ref(''); // 提示词类型筛选
+
+const handleQuoteChange = (val) => {
+  const textToAdd1 = `原文内容为：\n${props.selectedText}`;
+  const textToAdd2 = `\n\n原文内容为：\n${props.selectedText}`;
+
+  if (val) {
+    if (inputDemand.value) {
+      inputDemand.value += textToAdd2;
+    } else {
+      inputDemand.value = textToAdd1;
+    }
+  } else {
+    if (inputDemand.value.includes(textToAdd2)) {
+      inputDemand.value = inputDemand.value.replace(textToAdd2, '');
+    } else if (inputDemand.value.includes(textToAdd1)) {
+      inputDemand.value = inputDemand.value.replace(textToAdd1, '');
+    }
+  }
+};
 
 // 类型映射常量
 const typeOptions = [
@@ -249,7 +237,7 @@ const uniqueTypes = computed(() => {
   return Array.from(types).sort();
 });
 
- 
+
 
 // 获取提示词列表
 const fetchPromptList = async () => {
@@ -258,7 +246,7 @@ const fetchPromptList = async () => {
     const response = await request.post('/get_setting/get_all_prompt', {
       user_id: userId
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       promptList.value = response.data.data || [];
       filteredPromptList.value = [...promptList.value]; // 初始时显示所有提示词
@@ -275,13 +263,13 @@ const fetchPromptList = async () => {
 const applyPromptFilter = () => {
   filteredPromptList.value = promptList.value.filter(item => {
     // 提示词名称筛选
-    const nameMatch = !filterPromptName.value || 
+    const nameMatch = !filterPromptName.value ||
       (item.name && item.name.toLowerCase().includes(filterPromptName.value.toLowerCase()));
-    
+
     // 提示词类型筛选
-    const typeMatch = !filterPromptType.value || 
+    const typeMatch = !filterPromptType.value ||
       (item.type && String(item.type) === String(filterPromptType.value));
-    
+
     return nameMatch && typeMatch;
   });
 };
@@ -294,7 +282,7 @@ const fetchKnowledgeList = async () => {
     const response = await request.post('/get_knowledge/get_all_knowledge', {
       user_id: userId
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       knowledgeList.value = response.data.data || [];
       filteredKnowledgeList.value = [...knowledgeList.value]; // 初始时显示所有内容
@@ -313,21 +301,21 @@ const fetchKnowledgeList = async () => {
 const applyFilter = () => {
   filteredKnowledgeList.value = knowledgeList.value.filter(item => {
     // 标题筛选
-    const titleMatch = !filterTitle.value || 
+    const titleMatch = !filterTitle.value ||
       (item.title && item.title.toLowerCase().includes(filterTitle.value.toLowerCase()));
-    
+
     // 内容筛选
-    const contentMatch = !filterContent.value || 
+    const contentMatch = !filterContent.value ||
       (item.content && item.content.toLowerCase().includes(filterContent.value.toLowerCase()));
-    
+
     // 标签名称筛选
-    const labelMatch = !filterLabelName.value || 
+    const labelMatch = !filterLabelName.value ||
       (item.label_name !== undefined && item.label_name === filterLabelName.value);
-    
+
     // 类型ID筛选
-    const typeMatch = !filterTypeId.value || 
+    const typeMatch = !filterTypeId.value ||
       (item.type_id !== undefined && String(item.type_id) === String(filterTypeId.value));
-    
+
     return titleMatch && contentMatch && labelMatch && typeMatch;
   });
 };
@@ -342,7 +330,7 @@ const getKnowledgeTitleById = (id) => {
 
 
 
- 
+
 // 处理提交
 const handleSubmit = async () => {
   // 原代码：移除知识库内容选择的强制限制，允许不选择任何内容
@@ -350,11 +338,11 @@ const handleSubmit = async () => {
   //   ElMessage.warning('请至少选择一项知识库内容');
   //   return;
   // }
-  
+
   try {
     // 显示加载状态
     loading.value = true;
-    
+
     // 记录提交的信息
     console.log('提交已选择的知识库ID列表:', selectedKnowledgeIds.value);
     console.log('提交已选择的提示词ID列表:', selectedPromptIds.value);
@@ -366,12 +354,12 @@ const handleSubmit = async () => {
       prompt_ids: selectedPromptIds.value,
       user_need: inputDemand.value
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       // 获取AI生成的摘要结果
       const aiSummary = response.data.data || '';
       console.log('AI生成的摘要结果:', aiSummary);
-      
+
       // 返回结果给父组件
       emit('insert-success', {
         knowledgeIds: selectedKnowledgeIds.value,
@@ -379,10 +367,10 @@ const handleSubmit = async () => {
         demand: inputDemand.value,
         summary: aiSummary
       });
-      
+
       // 触发更新父组件的replacedText变量
       emit('insert-reference', aiSummary);
-      
+
       ElMessage.success('提交成功，AI摘要已生成并替换选中文本');
       handleCancel();
     } else {
@@ -443,17 +431,18 @@ const handleCancel = () => {
 .ai-reference-content {
   display: flex;
   flex-direction: column;
-  height: 100%; /* 继承父组件的100%高度 */
-  padding: 20px;
-  overflow-y: auto; /* 保持滚动条 */
+  height: 80vh;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* 三步水平布局容器 */
 .three-steps-container {
   display: flex;
   gap: 20px;
-  height: calc(100% - 40px); /* 减去上下padding的高度 */
   flex: 1;
+  min-height: 0;
 }
 
 /* 单个步骤容器 */
@@ -465,18 +454,30 @@ const handleCancel = () => {
   border: 1px solid #e4e7ed;
   border-radius: 8px;
   overflow: hidden;
-  min-width: 0; /* 防止flex子项溢出 */
+  min-width: 0;
+  /* 防止flex子项溢出 */
+}
+
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f5f7fa;
+  padding-right: 16px;
+  border-bottom: 1px solid #e4e7ed;
 }
 
 .step-title {
   margin: 0;
   padding: 16px 20px;
-  background-color: #f5f7fa;
   color: #303133;
   font-size: 16px;
   font-weight: 600;
-  border-bottom: 1px solid #e4e7ed;
   flex-shrink: 0;
+}
+
+.setting-btn {
+  font-size: 13px;
 }
 
 /* 筛选容器优化 */
@@ -489,18 +490,31 @@ const handleCancel = () => {
 
 .filter-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
 }
 
 .prompt-filter-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
   padding: 16px;
   background-color: #fafafa;
   border-bottom: 1px solid #e4e7ed;
   flex-shrink: 0;
+}
+
+.filter-input-item {
+  flex: 1;
+  min-width: 120px;
+}
+
+.filter-btn {
+  white-space: nowrap;
 }
 
 /* 提示词列表容器 */
@@ -553,10 +567,29 @@ const handleCancel = () => {
   padding: 10px;
   border-radius: 4px;
   transition: background-color 0.2s;
+  background-color: #fafafa;
+  border: 1px solid #ebeef5;
+  width: 100%;
 }
 
 .knowledge-item:hover {
-  background-color: #f5f7fa;
+  background-color: #f0f2f5;
+}
+
+.knowledge-checkbox {
+  display: flex;
+  align-items: flex-start;
+  height: auto;
+  margin-bottom: 20px;
+  margin-right: 0 !important;
+  white-space: normal;
+}
+
+:deep(.knowledge-checkbox .el-checkbox__label) {
+  padding-left: 12px;
+  width: calc(100% - 48px);
+  white-space: normal;
+  display: block;
 }
 
 .knowledge-title {
@@ -568,11 +601,21 @@ const handleCancel = () => {
 
 .knowledge-meta {
   display: flex;
-  flex-wrap: wrap; /* 允许换行 */
-  gap: 8px 16px; /* 垂直和水平间距 */
+  flex-wrap: wrap;
+  gap: 8px 16px;
   font-size: 12px;
   color: #909399;
-  word-break: break-word; /* 防止长文本溢出 */
+  word-break: break-word;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.knowledge-checkbox:hover .knowledge-meta {
+  max-height: 200px;
+  opacity: 1;
+  margin-top: 8px;
 }
 
 .selected-info {
@@ -593,10 +636,12 @@ const handleCancel = () => {
   overflow-y: auto;
 }
 
-.selected-item {
+.selected-item-text {
   padding: 4px 0;
-  font-size: 12px;
+  font-size: 13px;
   color: #606266;
+  line-height: 1.6;
+  word-break: break-word;
 }
 
 .ai-reference-actions {
@@ -639,7 +684,7 @@ const handleCancel = () => {
     flex-direction: column;
     height: auto;
   }
-  
+
   .step-container {
     min-height: 400px;
   }

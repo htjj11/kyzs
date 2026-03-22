@@ -18,14 +18,31 @@
           </h1>
           <div class="header-actions">
             <span class="id-value">{{ currentUserName }}</span>
-            <el-button type="warning" size="small" @click="handleLogout">
-              注销
-            </el-button>
-            <el-button type="primary" size="small" circle>
-              <el-icon>
-                <Setting />
-              </el-icon>
-            </el-button>
+
+            <el-dropdown trigger="click">
+              <div class="user-avatar-circle clickable">
+                {{ userInitial }}
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="showAccountSettingModal = true">
+                    <el-icon>
+                      <Edit />
+                    </el-icon> 个人设置
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="showAboutModal = true">
+                    <el-icon>
+                      <InfoFilled />
+                    </el-icon> 关于系统
+                  </el-dropdown-item>
+                  <el-dropdown-item divided @click="handleLogout" style="color: #f56c6c;">
+                    <el-icon>
+                      <SwitchButton />
+                    </el-icon> 注销登录
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
       </el-header>
@@ -75,14 +92,10 @@
                 </div>
 
                 <div class="submenu-group">
-                  <div class="group-label">报告管理</div>
-                  <el-menu-item index="3" class="menu-item">
+                  <div class="group-label">报告智能体</div>
+                  <el-menu-item index="6" class="menu-item">
                     <el-icon class="eye-icon">👁‍🗨</el-icon>
-                    <router-link to="/zsck" class="menu-link">报告</router-link>
-                  </el-menu-item>
-                  <el-menu-item index="4" class="menu-item">
-                    <el-icon class="eye-icon">👁‍🗨</el-icon>
-                    <router-link to="/zsck2" class="menu-link">报告(新版编辑器)</router-link>
+                    <router-link to="/report_view" class="menu-link">报告查看</router-link>
                   </el-menu-item>
                 </div>
               </el-sub-menu>
@@ -121,24 +134,6 @@
                 </div>
               </el-sub-menu>
 
-              <el-sub-menu index="3" class="menu-group">
-                <template #title>
-                  <div class="menu-title">
-                    <el-icon>
-                      <ChatDotSquare />
-                    </el-icon>
-                    <span>大模型知识库问答</span>
-                  </div>
-                </template>
-                <el-menu-item index="/webTranslation" class="menu-item">
-                  <el-icon>
-                    <EditPen />
-                  </el-icon>
-                  <router-link to="/wenda" class="menu-link">问答对话</router-link>
-                </el-menu-item>
-
-
-              </el-sub-menu>
 
               <el-sub-menu index="5" class="menu-group">
                 <template #title>
@@ -146,33 +141,25 @@
                     <el-icon>
                       <MessageBox />
                     </el-icon>
-                    <span>知识库管理</span>
+                    <span>知识库</span>
                   </div>
                 </template>
                 <div class="submenu-group">
-                  <el-menu-item index="/all_db" class="menu-item">
+                  <el-menu-item index="/public_db" class="menu-item">
                     <el-icon>
-                      <MessageBox />
+                      <Collection />
                     </el-icon>
-                    <router-link to="/all_db" class="menu-link">公共知识库查看</router-link>
-                  </el-menu-item>
-                  <el-menu-item index="/db_manage" class="menu-item">
-                    <el-icon>
-                      <MessageBox />
-                    </el-icon>
-                    <router-link to="/db_manage" class="menu-link">公共知识库管理</router-link>
+                    <router-link to="/public_db" class="menu-link">公共知识库</router-link>
                   </el-menu-item>
                   <el-menu-item index="/zskck" class="menu-item">
                     <el-icon>
                       <Message />
                     </el-icon>
-                    <router-link to="/zskck" class="menu-link">个人知识库管理</router-link>
+                    <router-link to="/zskck" class="menu-link">个人知识库</router-link>
                   </el-menu-item>
                 </div>
               </el-sub-menu>
-              <el-menu-item index="4" class="menu-item">
-                <router-link to="/qtsz" class="menu-link">其他设置</router-link>
-              </el-menu-item>
+
             </el-menu>
           </div>
         </el-aside>
@@ -186,43 +173,106 @@
       </el-container>
     </el-container>
   </div>
+
+  <!-- 个人设置弹窗 -->
+  <el-dialog v-model="showAccountSettingModal" title="个人设置" width="500px" append-to-body destroy-on-close
+    class="square-dialog">
+    <count-setting />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="showAccountSettingModal = false">关闭</el-button>
+      </div>
+    </template>
+  </el-dialog>
+
+  <!-- 关于系统弹窗 -->
+  <el-dialog v-model="showAboutModal" title="关于系统" width="600px" append-to-body destroy-on-close class="square-dialog">
+    <about-system />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="showAboutModal = false">关闭</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { getUserIdFromCookie, logoutUser } from '@/utils/authUtils'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { getUserIdFromCookie, logoutUser, getUserNameFromCookie, getExpireTimeFromCookie } from '@/utils/authUtils'
 import {
   Document,
   Location,
-  Setting,
   Collection,
   Connection,
   Upload,
   MessageBox,
   Message,
   ChatDotSquare,
-  EditPen
+  EditPen,
+  Edit,
+  SwitchButton,
+  InfoFilled
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { getUserNameFromCookie } from '@/utils/authUtils'
+import CountSetting from '@/components/zhanghu/count_setting.vue'
+import AboutSystem from '@/components/zhanghu/about_system.vue'
 
 // 当前cookie中的用户ID
 const currentUserId = ref<string | null>(null)
 const currentUserName = ref<string | null>(null)
+const showAccountSettingModal = ref(false)
+const showAboutModal = ref(false)
 const router = useRouter()
 
-// 计算属性：判断用户是否已登录
+// 存储真实的登录状态，使得Vue能响应其变化
+const isLoggedInStatus = ref(getUserIdFromCookie() !== null);
+
+// 计算属性：判断用户是否已登录，兼容模板
 const isLoggedIn = computed(() => {
-  const userId = getUserIdFromCookie();
-  // 只要userId存在且不为null，则认为已登录
-  return userId !== null;
+  return isLoggedInStatus.value;
 })
+
+// 计算属性：获取用户名的首字母作为头像
+const userInitial = computed(() => {
+  if (!currentUserName.value || currentUserName.value === '未登录') return '?';
+  return currentUserName.value.charAt(0).toUpperCase();
+})
+
+let cookieCheckInterval: any = null;
 
 // 组件挂载时获取当前用户ID
 onMounted(() => {
   const userName = getUserNameFromCookie();
   currentUserName.value = userName !== null ? userName : '未登录';
+
+  // 轮询检查cookie是否到期
+  cookieCheckInterval = setInterval(() => {
+    const hasUserId = getUserIdFromCookie() !== null;
+
+    // 获取单独的截止日期字段
+    const expireTime = getExpireTimeFromCookie();
+    const isExpired = expireTime ? new Date().getTime() > expireTime : false;
+
+    // 只有既有用户ID，且截止日期没有过期，才认为有效
+    const valid = hasUserId && !isExpired;
+
+    if (isLoggedInStatus.value !== valid) {
+      isLoggedInStatus.value = valid;
+    }
+    // 如果检查到cookie失效（未登录或时间已到），且当前路由不是登录页，强制跳转登出
+    if (!valid && router.currentRoute.value.path !== '/login') {
+      logoutUser(); // 清除可能残留的无效cookie
+      router.push('/login');
+    }
+  }, 1000);
+})
+
+// 组件销毁时清除定时器
+onUnmounted(() => {
+  if (cookieCheckInterval) {
+    clearInterval(cookieCheckInterval);
+  }
 })
 
 // 处理注销功能
@@ -318,8 +368,40 @@ const handleClose = (key: string, keyPath: string[]) => {
 .id-value {
   font-weight: 500;
   color: #a8c4e0;
-  margin-left: 4px;
+  margin-right: 4px;
   font-size: 13px;
+}
+
+.user-avatar-circle {
+  width: 32px;
+  height: 32px;
+  background-color: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.user-avatar-circle.clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-avatar-circle.clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* 主体容器样式 */

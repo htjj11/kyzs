@@ -44,3 +44,4 @@ frontend/dist/
 **/.idea/
 .vscode/
 *.iml
+/backend/file_data

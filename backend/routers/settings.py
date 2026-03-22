@@ -50,8 +50,8 @@ async def update_prompt(
     type: int = Body(..., embed=True, description="提示词内容"),
     id: int = Body(..., embed=True, description="提示词id")
 ):
-    prompt_result = kyzs_sql.mysql_exec(
-        "UPDATE `prompt` SET name=%s, text=%s, type=%s WHERE id=%s",
+    prompt_result = sqlite_execute(
+        "UPDATE `prompt` SET name=?, text=?, type=? WHERE id=?",
         (name, text, int(type), id)
     )
     return {"code": 200, "msg": 'success', "data": prompt_result}
@@ -62,7 +62,7 @@ async def delete_prompt(
     request: Request,
     id: int = Body(..., embed=True, description="提示词id")
 ):
-    prompt_result = kyzs_sql.mysql_exec("DELETE FROM `prompt` WHERE id=%s", (id,))
+    prompt_result = sqlite_execute("DELETE FROM `prompt` WHERE id=?", (id,))
     return {"code": 200, "msg": 'success', "data": prompt_result}
 
 
@@ -71,7 +71,7 @@ async def get_all_prompt_type(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    result = kyzs_sql.mysql_exec("SELECT * FROM `prompt_type` WHERE user_id=%s", (user_id,))
+    result = sqlite_execute("SELECT * FROM `prompt_type` WHERE user_id=?", (user_id,))
     return {"code": 200, "msg": 'success', "data": result}
 
 
@@ -91,8 +91,8 @@ async def add_label(
     user_id: int = Body(..., embed=True, description="用户id"),
     label_name: str = Body(..., embed=True, description="标签名称"),
 ):
-    label_result = kyzs_sql.mysql_exec(
-        "INSERT INTO `label` (user_id, label_name) VALUES (%s, %s)",
+    label_result = sqlite_execute(
+        "INSERT INTO `label` (user_id, label_name) VALUES (?, ?)",
         (user_id, label_name)
     )
     return {"code": 200, "msg": 'success', "data": label_result}
@@ -103,5 +103,35 @@ async def delete_label(
     request: Request,
     id: int = Body(..., embed=True, description="标签id")
 ):
-    label_result = kyzs_sql.mysql_exec("DELETE FROM `label` WHERE id=%s", (id,))
+    label_result = sqlite_execute("DELETE FROM `label` WHERE id=?", (id,))
     return {"code": 200, "msg": 'success', "data": label_result}
+
+
+#更改用户密码接口
+@router.post("/change_password")
+async def change_password(
+    request: Request,
+    user_id: int = Body(..., embed=True, description="用户id"),
+    old_password: str = Body(..., embed=True, description="旧密码"),
+    new_password: str = Body(..., embed=True, description="新密码"),
+):
+    """
+    修改用户密码
+    """
+    # 校验旧密码
+    user_info = sqlite_execute(
+        "SELECT id FROM user WHERE id=? AND passwd=?",
+        (user_id, old_password)
+    )
+    if not user_info:
+        return {"code": 400, "msg": "旧密码错误"}
+    
+    # 更新新密码
+    try:
+        sqlite_execute(
+            "UPDATE user SET passwd=? WHERE id=?",
+            (new_password, user_id)
+        )
+        return {"code": 200, "msg": "密码修改成功"}
+    except Exception as e:
+        return {"code": 500, "msg": f"修改失败: {str(e)}"}

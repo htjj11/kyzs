@@ -127,14 +127,6 @@ const getTagList = async () => {
 // 处理文件选择（多文件）
 const handleFileSelect = (file) => {
   const raw = file.raw
-  const maxSize = 10 * 1024 * 1024
-  if (raw.size > maxSize) {
-    error.value = `文件 "${raw.name}" 超过10MB，已跳过`
-    // 移除超过大小的文件
-    const idx = fileList.value.findIndex(f => f.uid === file.uid)
-    if (idx !== -1) fileList.value.splice(idx, 1)
-    return
-  }
 
   const allowedExtensions = ['.txt', '.doc', '.docx', '.pdf', '.md', '.ppt', '.pptx']
   const fileExtension = raw.name.toLowerCase().substring(raw.name.lastIndexOf('.'))

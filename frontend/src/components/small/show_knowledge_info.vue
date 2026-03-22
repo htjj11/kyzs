@@ -9,7 +9,7 @@
         <span class="meta-item">用户ID: {{ knowledgeData.user_id }}</span>
       </div>
     </div>
-    
+
     <div class="knowledge-content">
       <div class="content-section">
         <h4 class="section-title">内容</h4>
@@ -17,7 +17,7 @@
           <pre>{{ knowledgeData.content || '无内容' }}</pre>
         </div>
       </div>
-      
+
       <div class="mark-section">
         <div class="mark-item">
           <strong>标记信息：</strong>
@@ -25,32 +25,26 @@
         </div>
       </div>
     </div>
-    
+
     <div class="knowledge-actions" v-if="showActions">
       <button @click="onEdit" class="btn edit-btn" v-if="onEdit">编辑</button>
       <button @click="onDelete" class="btn delete-btn" v-if="onDelete">删除</button>
       <!-- 添加到大模型知识库按钮 -->
-      <button 
-        @click="onAddToKnowledgeBase"
-        :disabled="knowledgeData.in_anything === 1 || isAdding"
+      <button @click="onAddToKnowledgeBase" :disabled="knowledgeData.in_anything === 1 || isAdding"
         :class="['btn', knowledgeData.in_anything === 1 ? 'added-btn' : 'add-btn']"
-        title="{{ knowledgeData.in_anything === 1 ? '请到大模型知识库管理界面删除' : '添加到大模型知识库' }}"
-      >
+        title="{{ knowledgeData.in_anything === 1 ? '请到大模型知识库管理界面删除' : '添加到大模型知识库' }}">
         {{ isAdding ? '添加中...' : (knowledgeData.in_anything === 1 ? '已添加到大模型知识库' : '添加到大模型知识库') }}
       </button>
       <button @click="onClose" class="btn close-btn" v-if="onClose">关闭</button>
     </div>
-    
+
     <!-- 文件夹选择对话框组件 -->
-    <GetFolder 
-      v-model:visible="showFolderDialog"
-      @confirm="handleFolderSelected"
-    />
+    <GetFolder v-model:visible="showFolderDialog" @confirm="handleFolderSelected" />
   </div>
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref } from 'vue'
+import { defineEmits, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api/request'
 import GetFolder from './get_folder.vue'
@@ -106,7 +100,7 @@ const onAddToKnowledgeBase = () => {
   if (props.knowledgeData.in_anything === 1 || isAdding.value) {
     return
   }
-  
+
   // 显示文件夹选择对话框
   showFolderDialog.value = true
 }
@@ -116,16 +110,16 @@ const handleFolderSelected = async (folderData) => {
   if (!folderData || !folderData.id) {
     return
   }
-  
+
   try {
     isAdding.value = true
-    
+
     // 调用接口，传递知识ID和选择的文件夹ID
     const response = await api.post('/llm/add_knowledge_to_anythingllm', {
       knowledge_id: props.knowledgeData.id,
       folder_id: folderData.id
     })
-    
+
     // 检查响应
     if (response.data && response.data.code === 200 && response.data.msg === 'success') {
       ElMessage.success('添加到公共知识库成功')
@@ -322,20 +316,20 @@ const handleFolderSelected = async (folderData) => {
     border-radius: 0;
     border: none;
   }
-  
+
   .knowledge-title {
     font-size: 18px;
   }
-  
+
   .knowledge-meta {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .knowledge-actions {
     flex-direction: column;
   }
-  
+
   .btn {
     width: 100%;
   }

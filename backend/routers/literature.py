@@ -118,7 +118,8 @@ async def get_online_infomation_summary(
     """
     print(f"\033[32m用户请求 IP: {request.client.host}，联网搜索关键词：{online_infomation}\033[0m")
     try:
-        response = get_xunfei_api(online_infomation)
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(executor, get_xunfei_api, online_infomation)
         print(f'讯飞接口返回内容{response}')
         return {"code": 200, "msg": "success", "data": response}
     except Exception as e:
@@ -133,8 +134,8 @@ async def translate_keyword(
     """
     获取关键词翻译
     """
-    print(f"\033[32m用户请求 IP: {request.client.host}，查询关键词：{keyword}\033[0m")
-    response = translate_text_api(keyword, 'zh2en', 1)
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(executor, translate_text_api, keyword, 'zh2en', 1)
     if response:
         return {"code": 200, "msg": "success", "data": response}
     return {"code": 200, "data": []}
@@ -197,8 +198,8 @@ async def search_all_articles(
                 return []
             for paper in data:
                 doi = paper.get('DOI', '')
-                mark = kyzs_sql.mysql_exec(
-                    "SELECT id FROM `knowledgebase` WHERE user_id=%s AND mark_info=%s",
+                mark = sqlite_execute(
+                    "SELECT id FROM `knowledgebase` WHERE user_id=? AND mark_info=?",
                     (user_id, doi)
                 )
                 paper['is_collected'] = 1 if mark else 0
@@ -295,7 +296,7 @@ async def search_all_patents(
             'is_collected': item.get('is_collected', 0),
             '_raw': item,
         }
-
+ 
 
     def _normalize_wanfang_patent(item):
         return {
@@ -343,8 +344,8 @@ async def search_all_patents(
                 return []
             for p in data:
                 pid = p.get('公开号', '')
-                mark = kyzs_sql.mysql_exec(
-                    "SELECT id FROM `knowledgebase` WHERE user_id=%s AND mark_info=%s",
+                mark = sqlite_execute(
+                    "SELECT id FROM `knowledgebase` WHERE user_id=? AND mark_info=?",
                     (user_id, pid)
                 )
                 p['is_collected'] = 1 if mark else 0

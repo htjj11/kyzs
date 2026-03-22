@@ -78,7 +78,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, WarningFilled, Monitor, ArrowRight } from '@element-plus/icons-vue'
 import request from './api/request'
-import { setUserIdCookie, setUserNameCookie } from './utils/authUtils'
+import { setUserIdCookie, setUserNameCookie, setExpireTimeCookie } from './utils/authUtils'
 
 const router = useRouter()
 const isLoading = ref(false)
@@ -129,12 +129,16 @@ const handleLogin = async () => {
       setUserIdCookie(userId, 30)
       // 设置user_name
       setUserNameCookie(userName)
+      
+      // 设置单独的截止日期字段 (当前时间 + 30分钟的时间戳)
+      const expireTimestamp = new Date().getTime() + 30 * 60 * 1000;
+      setExpireTimeCookie(expireTimestamp, 30)
 
       ElMessage.success('登录成功')
 
       // 跳转至首页或指定页面
       setTimeout(() => {
-        router.push('/wxjs')
+        router.push('/literatureSearch')
       }, 1000)
       // 刷新页面
       setTimeout(() => {

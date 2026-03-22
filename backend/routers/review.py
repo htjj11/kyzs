@@ -4,16 +4,14 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-
+from core.sqlLiteExec import sqlite_execute
 from fastapi import APIRouter, Request, Body
-from services.literature_service import (
-    siliconflow_deepseek_answer,
-    modify_summary_api,
-    modify_review_new_api,
-    generate_word_api,
-    generate_fuwenben_word_api,
+from services.third_party_source.aichat_api import (
+    siliconflow_deepseek_answer
 )
-
+from services.report_service import (
+    modify_review_new_api
+)
 executor = ThreadPoolExecutor()
 
 router = APIRouter(
@@ -28,8 +26,8 @@ async def create_review(
     user_id: int = Body(..., embed=True, description="用户id"),
     title: str = Body(..., embed=True, description="报告的主题"),
 ):
-    res = kyzs_sql.mysql_exec(
-        "INSERT INTO `review_records` (title, completion_status, review_body, user_id) VALUES (%s, 0, '请从此处开始编辑', %s)",
+    res = sqlite_execute(
+        "INSERT INTO `review_records` (title, completion_status, review_body, user_id) VALUES (?, 0, '请从此处开始编辑', ?)",
         (title, user_id)
     )
     return {"code": 200, "msg": 'success', "data": res}
@@ -42,12 +40,12 @@ async def create_review_by_template(
     title: str = Body(..., embed=True, description="报告的主题"),
     template_id: int = Body(..., embed=True, description="绑定的模板id")
 ):
-    template = kyzs_sql.mysql_exec(
-        "SELECT * FROM `review_template` WHERE id=%s", (template_id,)
+    template = sqlite_execute(
+        "SELECT * FROM `review_template` WHERE id=?", (template_id,)
     )
     template_content = template[0]['content']
-    res = kyzs_sql.mysql_exec(
-        "INSERT INTO `review_records` (title, completion_status, review_body, user_id, label_id) VALUES (%s, 0, %s, %s, %s)",
+    res = sqlite_execute(
+        "INSERT INTO `review_records` (title, completion_status, review_body, user_id, label_id) VALUES (?, 0, ?, ?, ?)",
         (title, template_content, user_id, template_id)
     )
     return {"code": 200, "msg": 'success', "data": res}
@@ -58,7 +56,7 @@ async def delete_review(
     request: Request,
     review_id: int = Body(..., embed=True, description="报告id")
 ):
-    res = kyzs_sql.mysql_exec("DELETE FROM `review_records` WHERE id=%s", (review_id,))
+    res = sqlite_execute("DELETE FROM `review_records` WHERE id=?", (review_id,))
     return {"code": 200, "msg": 'success', "data": res}
 
 
@@ -67,19 +65,10 @@ async def get_all_review(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    res = kyzs_sql.mysql_exec("SELECT * FROM `review_records` WHERE user_id=%s", (user_id,))
+    res = sqlite_execute("SELECT * FROM `review_records` WHERE user_id=?", (user_id,))
     return {"code": 200, "msg": 'success', "data": res}
 
-
-@router.post("/get_review_base64")
-async def get_review_detail(
-    request: Request,
-    review_id: int = Body(..., embed=True, description="报告id")
-):
-    result = generate_word_api(review_id)
-    return {"code": 200, "msg": 'success', "data": result}
-
-
+ 
 @router.post("/get_review_fuwenben_base64")
 async def get_review_fuwenben_base64(
     request: Request,
@@ -111,12 +100,13 @@ async def modify_review_new(
     review_body: str = Body(..., embed=True, description="综述正文"),
 ):
     print(f"用户请求 IP: {request.client.host}，记录id：{review_id}，综述正文：{review_body}")
+
     response = modify_review_new_api(review_id, review_body)
     if response:
         return {"code": 200, "msg": "success", "data": None}
     return 0
 
-
+#基于互联网模型获取大模型回复
 @router.post('/get_summary_by_ai')
 async def get_summary_by_ai(
     request: Request,
@@ -125,8 +115,8 @@ async def get_summary_by_ai(
     user_need: str = Body(..., embed=True, description="用户需求字符串"),
 ):
     if knowledge_ids:
-        placeholders = ','.join(['%s'] * len(knowledge_ids))
-        knowledge_rows = kyzs_sql.mysql_exec(
+        placeholders = ','.join(['?'] * len(knowledge_ids))
+        knowledge_rows = sqlite_execute(
             f"SELECT content FROM knowledgebase WHERE id IN ({placeholders})",
             tuple(knowledge_ids)
         )
@@ -134,8 +124,8 @@ async def get_summary_by_ai(
         knowledge_rows = []
 
     if prompt_ids:
-        placeholders = ','.join(['%s'] * len(prompt_ids))
-        prompt_rows = kyzs_sql.mysql_exec(
+        placeholders = ','.join(['?'] * len(prompt_ids))
+        prompt_rows = sqlite_execute(
             f"SELECT text FROM prompt WHERE id IN ({placeholders})",
             tuple(prompt_ids)
         )
@@ -145,14 +135,22 @@ async def get_summary_by_ai(
     knowledge_content = '\n'.join(r['content'] for r in knowledge_rows if r.get('content'))
     prompt_content = '\n'.join(r['text'] for r in prompt_rows if r.get('text'))
 
-    prompt = f"""    
-    知识库内容：
+    prompt = f"""你是一个专业的学术与文本分析助手。请严格基于以下提供的信息来响应最终的用户需求。
+
+    ### 【知识库内容】
     {knowledge_content}
-    格式\内容要求：
+
+    ### 【格式与内容要求】
     {prompt_content}
-    用户需求：
+
+    ### 【用户需求】
     {user_need}
-    请你按照需求,直接回复用户,不需要多余的解释
+
+    ### 【输出准则】
+    1. 请严格围绕【用户需求】进行作答。
+    2. 必须遵从【格式与内容要求】中的所有规范。
+    3. 答案应尽量参考【知识库内容】所提供的事实。
+    4. 请直接输出最终的回复内容，绝对不要包含任何多余的解释、开场白（如“好的”、“根据提供的内容”等）或过渡句。
     """
     print(prompt)
     summary = await asyncio.get_event_loop().run_in_executor(
@@ -166,5 +164,5 @@ async def get_all_template(
     request: Request,
     user_id: int = Body(..., embed=True, description="用户id")
 ):
-    res = kyzs_sql.mysql_exec("SELECT * FROM `review_template`")
+    res = sqlite_execute("SELECT * FROM `review_template`")
     return {"code": 200, "msg": 'success', "data": res}
