@@ -3,7 +3,7 @@ import hashlib
 import base64
 import urllib.parse
 import time
-from config import settings
+
 
 
 
@@ -90,7 +90,7 @@ def get_article_from_juhe_api(keywords:list,date:str=None,page=1,size=10,sort=3)
     except KeyError as e:
         print(f"聚合检索响应数据缺少必要字段: {str(e)}")
     except Exception as e:
-        print(f"聚合检索未知错误: {str(e)}")
+        print(f"聚合检索未知错误: 原始内容：{response.text}，{str(e)}")
 
 
 if __name__ == "__main__":

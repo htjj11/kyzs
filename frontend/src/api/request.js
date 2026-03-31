@@ -1,11 +1,11 @@
 import axios from "axios";
 import api_url from "./config";
-import { 
-    getUserIdFromCookie, 
-    setUserIdCookie, 
-    getUserNameFromCookie, 
-    setUserNameCookie, 
-    setExpireTimeCookie 
+import {
+    getUserIdFromCookie,
+    setUserIdCookie,
+    getUserNameFromCookie,
+    setUserNameCookie,
+    setExpireTimeCookie
 } from "@/utils/authUtils";
 
 // 验证授权状态的函数
@@ -30,7 +30,7 @@ api.interceptors.request.use(
             const expireTime = Date.now() + 30 * 60 * 1000; // 计算新的截止时间
             setExpireTimeCookie(expireTime, 30);
             setUserIdCookie(userId, 30);
-            
+
             const userName = getUserNameFromCookie();
             if (userName) {
                 setUserNameCookie(userName, 30);

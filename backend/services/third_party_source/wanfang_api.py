@@ -20,7 +20,7 @@ def get_article_from_wanfang_api(start_year=None, end_year=None, Keywords=[], St
     # print(f"检索表达式：{exp}")
 
     def send_soap_request_paper(exp, startRecord=1, maximumRecords=10):
-        url = "http://10.68.16.2/S/SRW/Paper.asmx"
+        url = "http://10.68.16.2:8088/S/SRW/Paper.asmx"
         headers = {"Host": "10.68.16.2", "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "searchRetrieve"}
         soap_body = f"""<?xml version="1.0" encoding="utf-8"?>
             <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -96,7 +96,7 @@ def wangfang_patent(start_year=None, end_year=None, patent_name=[], StartRecord=
     # print(f"检索表达式：{exp}")  # 原版注释掉了，保持一致
 
     def send_soap_request_patent(exp, startRecord=1, maximumRecords=10):
-        url = "http://10.68.16.2/S/SRW/Patent.asmx"
+        url = "http://10.68.16.2:8088/S/SRW/Patent.asmx"
         headers = {"Host": "10.68.16.2", "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "searchRetrieve"}
         soap_body = f"""<?xml version="1.0" encoding="utf-8"?>
             <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

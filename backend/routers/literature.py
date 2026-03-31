@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request, Body
 from services.literature_service import (
     get_xunfei_api,
 )
+from core.sqlLiteExec import sqlite_execute
 #=======引入第三方文献专利的接口======
 from services.third_party_source.oilink_api import (
     get_articles_from_oillink,
@@ -185,7 +186,7 @@ async def search_all_articles(
                 items = [i for i in items if _year_in_range(i['year'], start_year, end_year)]
             return items
         except Exception as e:
-            print(f"聚合文献检索出错: {e}")
+            print(f"聚合文献检索出错: 原始结果：{data}，错误信息：{e}")
             return []
 
     def _fetch_wanfang():
@@ -208,7 +209,7 @@ async def search_all_articles(
                 items = [i for i in items if _year_in_range(i['year'], start_year, end_year)]
             return items
         except Exception as e:
-            print(f"万方文献检索出错: {e}")
+            print(f"万方文献检索出错: ，错误信息：{e}")
             return []
 
     oilink_res, juhe_res, wanfang_res = await asyncio.gather(
@@ -221,7 +222,7 @@ async def search_all_articles(
     merged.sort(key=lambda x: _extract_year(x.get('year')) or 0, reverse=True)
     result = merged
 
-    print(f"聚合文献结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
+    print(f"合并文献检索结果: OilLink={len(oilink_res)}, 聚合={len(juhe_res)}, 万方={len(wanfang_res)}, 返回={len(result)}")
     return {"code": 200, "msg": "success", "data": result}
 
 
