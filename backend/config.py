@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     # 讯飞星火（用于联网搜索，格式：AppId:APISecret）
     xunfei_api_key: str = ""
 
+    # 火山方舟豆包（联网搜索）：控制台 API Key + 推理接入点 ID（ep- 开头）
+    doubao_ark_api_key: str = ""
+    doubao_ark_model: str = ""
+    doubao_ark_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
+
+    # 秘塔 AI 搜索（https://metaso.cn/search-api/api-keys）
+    metaso_api_key: str = ""
+
     # 重庆聚合文献（内网文献检索服务）
     juhe_token: str = ""
 
