@@ -34,6 +34,7 @@
                             <el-tag v-if="item.status === 'ready'" type="info">已就绪</el-tag>
                             <el-tag v-else-if="item.status === 'uploading'" type="warning">上传中...</el-tag>
                             <el-tag v-else-if="item.status === 'success'" type="success">成功</el-tag>
+                            <el-tag v-else-if="item.status === 'skipped'" type="info">已跳过（相同文件）</el-tag>
                             <el-tag v-else-if="item.status === 'error'" type="danger">失败</el-tag>
                             <el-button v-if="item.status === 'ready' || item.status === 'error'" link type="danger"
                                 @click="removeUploadItem(index)">
@@ -58,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import request from '@/api/request'
@@ -132,11 +133,13 @@ const startUpload = async () => {
     isUploading.value = true
 
     let successCount = 0
+    let skipCount = 0
     let failCount = 0
 
     for (const item of uploadItems.value) {
-        if (item.status === 'success') {
-            successCount++
+        if (item.status === 'success' || item.status === 'skipped') {
+            if (item.status === 'success') successCount++
+            if (item.status === 'skipped') skipCount++
             continue
         }
 
@@ -166,19 +169,41 @@ const startUpload = async () => {
                 throw new Error(response.data?.msg || '上传失败')
             }
         } catch (error) {
+            const status = error.response?.status
+            if (status === 409) {
+                item.status = 'skipped'
+                item.progress = 100
+                skipCount++
+                continue
+            }
             console.error('上传文件失败:', item.file.name, error)
             item.status = 'error'
             failCount++
+            const d = error.response?.data?.detail
+            const msg =
+                typeof d === 'string'
+                    ? d
+                    : Array.isArray(d)
+                      ? d.map((x) => x.msg || String(x)).join('；')
+                      : error.message || '上传失败'
+            ElMessage.error(`${item.file.name}：${msg}`)
         }
     }
 
     isUploading.value = false
 
     if (failCount === 0) {
-        ElMessage.success(`成功上传 ${successCount} 个文件`)
+        const parts = []
+        if (successCount > 0) parts.push(`成功上传 ${successCount} 个`)
+        if (skipCount > 0) parts.push(`跳过重复 ${skipCount} 个（内容已存在）`)
+        if (parts.length) {
+            ElMessage.success(parts.join('，'))
+        }
         emit('success')
     } else {
-        ElMessage.warning(`上传完成。成功 ${successCount} 个，失败 ${failCount} 个`)
+        ElMessage.warning(
+            `上传完成。成功 ${successCount} 个，跳过重复 ${skipCount} 个，失败 ${failCount} 个`
+        )
     }
 }
 </script>

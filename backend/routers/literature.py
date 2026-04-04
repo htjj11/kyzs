@@ -3,6 +3,7 @@
 '''
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 from fastapi import APIRouter, Request, Body
 from services.third_party_source.aichat_api import fetch_online_infomation_summary
@@ -27,7 +28,7 @@ import re
 executor = ThreadPoolExecutor()
 
 
-def _extract_year(value) -> int | None:
+def _extract_year(value) -> Optional[int]:
     """从各种日期格式中提取年份数字"""
     if value is None:
         return None

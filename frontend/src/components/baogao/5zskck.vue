@@ -13,9 +13,15 @@
             {{ label.label_name }}
           </button>
         </div>
-        <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
-          <el-icon><Setting /></el-icon> 标签设置
-        </el-button>
+        <div class="label-tabs-actions">
+          <el-button type="primary" @click="goFileUpload">
+            <el-icon><Upload /></el-icon>
+            个人资料上传
+          </el-button>
+          <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
+            <el-icon><Setting /></el-icon> 标签设置
+          </el-button>
+        </div>
       </div>
 
       <!-- 其他筛选条件 -->
@@ -236,11 +242,17 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import request from '@/api/request'
 import { ElMessage, ElMessageBox, ElSelect, ElOption, ElLoading } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
+import { Setting, Upload } from '@element-plus/icons-vue'
 import ShowKnowledgeInfo from '@/components/small/show_knowledge_info.vue'
 import SettingLabel from '@/components/small/setting_label.vue'
+
+const router = useRouter()
+const goFileUpload = () => {
+  router.push('/fileUpload')
+}
 
 // 知识库列表数据
 const knowledgeList = ref([])
@@ -886,8 +898,14 @@ const getTypeName = (typeId) => {
   align-items: center;
 }
 
+.label-tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .setting-labels-btn {
-  margin-left: 16px;
   font-weight: 500;
 }
 
