@@ -18,16 +18,20 @@ import os
 executor = ThreadPoolExecutor()
 
 
-def _ensure_public_file_content_hash_column() -> None:
-    """为 publicDatabase_file 增加 content_hash（文件内容 SHA256），用于去重。"""
+def _ensure_public_file_hash_schema() -> None:
+    """为 publicDatabase_file 增加 content_hash，并建 (category_id, content_hash) 索引；查重用一条 SQL，不靠遍历。"""
     info = sqlite_execute("PRAGMA table_info(publicDatabase_file)")
     if not info:
         return
     names = {row["name"] for row in info}
-    if "content_hash" in names:
-        return
+    if "content_hash" not in names:
+        sqlite_execute(
+            "ALTER TABLE publicDatabase_file ADD COLUMN content_hash TEXT",
+            fetch="none",
+        )
     sqlite_execute(
-        "ALTER TABLE publicDatabase_file ADD COLUMN content_hash TEXT",
+        "CREATE INDEX IF NOT EXISTS idx_publicDatabase_file_category_content_hash "
+        "ON publicDatabase_file(category_id, content_hash)",
         fetch="none",
     )
 
@@ -160,7 +164,7 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="base64_data 解码失败，请确认字符串合法且不含 data: 前缀")
 
     content_hash = hashlib.sha256(file_bytes).hexdigest()
-    _ensure_public_file_content_hash_column()
+    _ensure_public_file_hash_schema()
     dup = sqlite_execute(
         "SELECT id FROM publicDatabase_file WHERE category_id=? AND content_hash=?",
         (category_id, content_hash),
