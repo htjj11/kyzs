@@ -11,10 +11,13 @@
     </div>
 
     <div class="knowledge-content">
+      <div v-if="contentWasTruncated" class="content-truncate-tip">
+        正文过长（约 {{ contentCharCount }} 字），浏览器无法完整展示。请返回列表使用「下载源文件」查看完整文件。
+      </div>
       <div class="content-section">
-        <h4 class="section-title">内容</h4>
+        <h4 class="section-title">内容{{ contentWasTruncated ? '（预览）' : '' }}</h4>
         <div class="content-body">
-          <pre>{{ knowledgeData.content || '无内容' }}</pre>
+          <pre>{{ displayContent }}</pre>
         </div>
       </div>
 
@@ -32,7 +35,7 @@
       <!-- 添加到大模型知识库按钮 -->
       <button @click="onAddToKnowledgeBase" :disabled="knowledgeData.in_anything === 1 || isAdding"
         :class="['btn', knowledgeData.in_anything === 1 ? 'added-btn' : 'add-btn']"
-        title="{{ knowledgeData.in_anything === 1 ? '请到大模型知识库管理界面删除' : '添加到大模型知识库' }}">
+        :title="knowledgeData.in_anything === 1 ? '请到大模型知识库管理界面删除' : '添加到大模型知识库'">
         {{ isAdding ? '添加中...' : (knowledgeData.in_anything === 1 ? '已添加到大模型知识库' : '添加到大模型知识库') }}
       </button>
       <button @click="onClose" class="btn close-btn" v-if="onClose">关闭</button>
@@ -44,7 +47,7 @@
 </template>
 
 <script setup>
-import { defineEmits, ref } from 'vue'
+import { defineEmits, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api/request'
 import GetFolder from './get_folder.vue'
@@ -74,6 +77,26 @@ const props = defineProps({
 
 // 定义组件事件
 const emit = defineEmits(['edit', 'delete', 'close', 'addToKnowledgeBase', 'updateStatus'])
+
+/** 详情页最多渲染字符数，避免超大上传（如数百 MB 文本）拖垮浏览器 */
+const CONTENT_PREVIEW_MAX = 200000
+
+const contentCharCount = computed(() => {
+  const c = props.knowledgeData?.content
+  return typeof c === 'string' ? c.length : 0
+})
+
+const contentWasTruncated = computed(
+  () => contentCharCount.value > CONTENT_PREVIEW_MAX
+)
+
+const displayContent = computed(() => {
+  const c = props.knowledgeData?.content
+  if (c == null || c === '') return '无内容'
+  if (typeof c !== 'string') return String(c)
+  if (c.length <= CONTENT_PREVIEW_MAX) return c
+  return c.slice(0, CONTENT_PREVIEW_MAX) + '\n\n…（已截断）'
+})
 
 // 添加加载状态
 const isAdding = ref(false)
@@ -215,6 +238,17 @@ const handleFolderSelected = async (folderData) => {
   border: 1px solid #e8e8e8;
 }
 
+.content-truncate-tip {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  color: #0958d9;
+  padding: 12px 14px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .content-body pre {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -223,6 +257,8 @@ const handleFolderSelected = async (folderData) => {
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: min(70vh, 800px);
+  overflow: auto;
 }
 
 .mark-section {

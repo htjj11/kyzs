@@ -80,8 +80,11 @@ def add_mycontent_file_to_knowledge(file_base64_string: str, file_extension: str
     new_filename = f"{int(time.time() * 1000)}.{file_ext}"
     file_path = os.path.join("file_data", new_filename)
 
+    max_bytes = 200 * 1024 * 1024  # 与前端「资料上传」单文件上限一致
     try:
         binary = base64.b64decode(file_base64_string)
+        if len(binary) > max_bytes:
+            return {"code": 400, "msg": f"单文件不能超过 {max_bytes // (1024 * 1024)}MB", "data": None}
         with open(file_path, "wb") as f:
             f.write(binary)
     except Exception:

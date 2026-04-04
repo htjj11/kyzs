@@ -363,8 +363,18 @@ const editForm = ref({
   knowledge_mark_info: ''
 })
 
+/** 超过该长度不在编辑框内加载正文，避免超大上传导致页面卡死 */
+const MAX_EDIT_CONTENT_CHARS = 300000
+
 // 编辑知识库
 const editKnowledge = (item) => {
+  const raw = item.content
+  if (typeof raw === 'string' && raw.length > MAX_EDIT_CONTENT_CHARS) {
+    ElMessage.warning(
+      '该条正文过长，无法在页面中编辑。请使用「下载源文件」查看完整内容，或删除后重新上传。'
+    )
+    return
+  }
   // 填充编辑表单数据
   editForm.value = {
     knowledge_id: item.id,
