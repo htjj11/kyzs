@@ -3,11 +3,10 @@
 '''
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 from fastapi import APIRouter, Request, Body
-from services.literature_service import (
-    get_xunfei_api,
-)
+from services.third_party_source.aichat_api import fetch_online_infomation_summary
 from core.sqlLiteExec import sqlite_execute
 #=======引入第三方文献专利的接口======
 from services.third_party_source.oilink_api import (
@@ -29,7 +28,7 @@ import re
 executor = ThreadPoolExecutor()
 
 
-def _extract_year(value) -> int | None:
+def _extract_year(value) -> Optional[int]:
     """从各种日期格式中提取年份数字"""
     if value is None:
         return None
@@ -113,15 +112,22 @@ router = APIRouter(
 async def get_online_infomation_summary(
     request: Request,
     online_infomation: str = Body(..., embed=True, description="想要检索的关键词"),
+    provider: str = Body("xunfei", embed=True, description="搜索引擎：xunfei（讯飞）| doubao（豆包/火山方舟）| metaso（秘塔）"),
 ):
     """
-    获取互联网信息一篇摘要
+    获取互联网信息一篇摘要（支持讯飞 / 豆包 Ark / 秘塔）
     """
-    print(f"\033[32m用户请求 IP: {request.client.host}，联网搜索关键词：{online_infomation}\033[0m")
+    print(
+        f"\033[32m用户请求 IP: {request.client.host}，联网搜索关键词：{online_infomation}，provider={provider}\033[0m"
+    )
     try:
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(executor, get_xunfei_api, online_infomation)
-        print(f'讯飞接口返回内容{response}')
+        response = await loop.run_in_executor(
+            executor, fetch_online_infomation_summary, online_infomation, provider
+        )
+        print(f"联网摘要接口返回：{response}")
+        if isinstance(response, dict) and response.get("error"):
+            return {"code": 500, "msg": str(response["error"])}
         return {"code": 200, "msg": "success", "data": response}
     except Exception as e:
         return {"code": 500, "msg": f"互联网信息摘要出错: {str(e)}"}

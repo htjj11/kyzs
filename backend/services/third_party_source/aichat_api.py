@@ -1,4 +1,240 @@
 import requests
+from config import settings
+
+
+def _normalize_metaso_to_xunfei_shape(result: dict) -> dict:
+    """将秘塔 /search/v2 返回的 data 转为与讯飞接口相近的 choices 结构，供前端解析。"""
+    text = (result or {}).get("text") or ""
+    refs = (result or {}).get("references") or []
+    outputs = []
+    for r in refs:
+        if not isinstance(r, dict):
+            continue
+        title = r.get("title") or r.get("name") or r.get("snippet") or ""
+        url = r.get("url") or r.get("link") or r.get("href") or ""
+        outputs.append({"title": str(title), "url": str(url)})
+    return {
+        "choices": [
+            {"message": {"role": "assistant", "content": text}},
+            {
+                "message": {
+                    "role": "tool",
+                    "tool_calls": [
+                        {
+                            "type": "web_search",
+                            "web_search": {"outputs": outputs},
+                        }
+                    ],
+                }
+            },
+        ]
+    }
+
+
+def _normalize_doubao_response(data: dict) -> dict:
+    """
+    将火山 Ark chat/completions 响应尽量转为前端可用的 choices 结构。
+    若已是多条 message（含 tool）则原样返回；否则从单条 assistant 中尽量提取引用。
+    """
+    if not data or not isinstance(data, dict):
+        return {"choices": []}
+    err = data.get("error")
+    if err:
+        msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+        return {"choices": [], "error": msg}
+
+    choices = data.get("choices")
+    if not choices:
+        return {"choices": []}
+
+    # 已是 assistant + tool 分条（与讯飞类似）
+    roles = [c.get("message", {}).get("role") for c in choices if c.get("message")]
+    if "assistant" in roles and "tool" in roles:
+        return data
+
+    first = choices[0]
+    msg = first.get("message") or {}
+    content = msg.get("content") or ""
+
+    outputs = []
+    refs = data.get("references") or data.get("web_search_results")
+    if isinstance(refs, list):
+        for r in refs:
+            if isinstance(r, dict):
+                outputs.append(
+                    {
+                        "title": str(r.get("title", r.get("name", ""))),
+                        "url": str(r.get("url", r.get("link", ""))),
+                    }
+                )
+
+    if not outputs:
+        annotations = msg.get("annotations") or first.get("annotations")
+        if isinstance(annotations, list):
+            for a in annotations:
+                if isinstance(a, dict) and a.get("type") == "url_citation":
+                    cite = a.get("url_citation") or a
+                    if isinstance(cite, dict):
+                        outputs.append(
+                            {
+                                "title": str(cite.get("title", "")),
+                                "url": str(cite.get("url", "")),
+                            }
+                        )
+
+    return {
+        "choices": [
+            {"message": {"role": "assistant", "content": content}},
+            {
+                "message": {
+                    "role": "tool",
+                    "tool_calls": [
+                        {"type": "web_search", "web_search": {"outputs": outputs}}
+                    ],
+                }
+            },
+        ]
+    }
+
+
+def _normalize_ark_responses_api(data: dict) -> dict:
+    """将 Responses API（/responses）返回体转为前端可用的 choices 结构。"""
+    if not data or not isinstance(data, dict):
+        return {"choices": []}
+    err = data.get("error")
+    if err:
+        msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+        return {"choices": [], "error": msg}
+
+    texts: list[str] = []
+    refs: list[dict] = []
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            t = obj.get("type")
+            if t == "output_text" and isinstance(obj.get("text"), str):
+                texts.append(obj["text"])
+            if t == "url_citation":
+                cite = obj.get("url_citation") if isinstance(obj.get("url_citation"), dict) else obj
+                if isinstance(cite, dict) and cite.get("url"):
+                    refs.append(
+                        {
+                            "title": str(cite.get("title", "")),
+                            "url": str(cite.get("url", "")),
+                        }
+                    )
+            for v in obj.values():
+                walk(v)
+        elif isinstance(obj, list):
+            for x in obj:
+                walk(x)
+
+    walk(data.get("output", []))
+    if not texts and data.get("output") in (None, []):
+        walk(data)
+
+    content = "".join(texts).strip() or (data.get("output_text") or "") or ""
+    # 去重引用
+    seen = set()
+    uniq_refs = []
+    for r in refs:
+        u = r.get("url", "")
+        if u and u not in seen:
+            seen.add(u)
+            uniq_refs.append(r)
+
+    return {
+        "choices": [
+            {"message": {"role": "assistant", "content": content}},
+            {
+                "message": {
+                    "role": "tool",
+                    "tool_calls": [
+                        {
+                            "type": "web_search",
+                            "web_search": {"outputs": uniq_refs},
+                        }
+                    ],
+                }
+            },
+        ]
+    }
+
+
+def get_metaso_api(keyword: str):
+    """秘塔 AI 联网搜索（官方 Open API：POST /api/open/search/v2）"""
+    if not settings.metaso_api_key:
+        return {"choices": [], "error": "未配置秘塔 API Key，请在 .env 中设置 metaso_api_key"}
+    url = "https://metaso.cn/api/open/search/v2"
+    headers = {
+        "Authorization": f"Bearer {settings.metaso_api_key}",
+        "Content-Type": "application/json",
+    }
+    body = {"question": keyword, "lang": "zh", "stream": False}
+    try:
+        resp = requests.post(url, headers=headers, json=body, timeout=120)
+        resp.raise_for_status()
+        payload = resp.json()
+        data = payload.get("data")
+        if data is None:
+            return {"choices": [], "error": payload.get("msg") or str(payload)}
+        return _normalize_metaso_to_xunfei_shape(data)
+    except requests.RequestException as e:
+        return {"choices": [], "error": str(e)}
+
+
+def get_doubao_ark_api(keyword: str):
+    """
+    火山方舟豆包 + 联网搜索：使用 Responses API（/responses + tools: web_search）。
+    Chat Completions 与 web_search 组合易报 missing tools.function，与官方示例一致走 Responses。
+    文档：https://www.volcengine.com/docs/82379/1756990
+    """
+    if not settings.doubao_ark_api_key or not settings.doubao_ark_model:
+        return {
+            "choices": [],
+            "error": "未配置豆包 Ark：请在 .env 中设置 doubao_ark_api_key 与 doubao_ark_model（推理接入点 ID）",
+        }
+    base = (settings.doubao_ark_base_url or "").rstrip("/")
+    url = f"{base}/responses"
+    payload = {
+        "model": settings.doubao_ark_model,
+        "stream": False,
+        "tools": [{"type": "web_search"}],
+        "input": [
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": keyword}],
+            }
+        ],
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.doubao_ark_api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=120)
+        data = resp.json()
+        if resp.status_code >= 400:
+            err = data.get("error") if isinstance(data, dict) else None
+            msg = err.get("message", resp.text) if isinstance(err, dict) else resp.text
+            return {"choices": [], "error": msg}
+        return _normalize_ark_responses_api(data)
+    except requests.RequestException as e:
+        return {"choices": [], "error": str(e)}
+
+
+def fetch_online_infomation_summary(keyword: str, provider: str = "xunfei"):
+    """
+    联网摘要：provider 可选 xunfei | doubao | metaso
+    """
+    p = (provider or "xunfei").strip().lower()
+    if p in ("doubao", "ark", "volcengine"):
+        return get_doubao_ark_api(keyword)
+    if p == "metaso":
+        return get_metaso_api(keyword)
+    return get_xunfei_api(keyword)
+
+
 #基于讯飞网络知识检索获取信息
 def get_xunfei_api(keyword: str):
     def xunfei_online_search(question):

@@ -82,12 +82,6 @@
                     </el-icon>
                     <router-link to="/webinfoSearch" class="menu-link">网络信息检索</router-link>
                   </el-menu-item>
-                  <el-menu-item index="/fileUpload" class="menu-item">
-                    <el-icon>
-                      <Upload />
-                    </el-icon>
-                    <router-link to="/fileUpload" class="menu-link">个人资料上传</router-link>
-                  </el-menu-item>
 
                 </div>
 
@@ -204,7 +198,6 @@ import {
   Location,
   Collection,
   Connection,
-  Upload,
   MessageBox,
   Message,
   ChatDotSquare,

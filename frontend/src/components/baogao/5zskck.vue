@@ -13,9 +13,15 @@
             {{ label.label_name }}
           </button>
         </div>
-        <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
-          <el-icon><Setting /></el-icon> 标签设置
-        </el-button>
+        <div class="label-tabs-actions">
+          <el-button type="primary" @click="goFileUpload">
+            <el-icon><Upload /></el-icon>
+            个人资料上传
+          </el-button>
+          <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
+            <el-icon><Setting /></el-icon> 标签设置
+          </el-button>
+        </div>
       </div>
 
       <!-- 其他筛选条件 -->
@@ -236,11 +242,17 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import request from '@/api/request'
 import { ElMessage, ElMessageBox, ElSelect, ElOption, ElLoading } from 'element-plus'
-import { Setting } from '@element-plus/icons-vue'
+import { Setting, Upload } from '@element-plus/icons-vue'
 import ShowKnowledgeInfo from '@/components/small/show_knowledge_info.vue'
 import SettingLabel from '@/components/small/setting_label.vue'
+
+const router = useRouter()
+const goFileUpload = () => {
+  router.push('/fileUpload')
+}
 
 // 知识库列表数据
 const knowledgeList = ref([])
@@ -363,8 +375,18 @@ const editForm = ref({
   knowledge_mark_info: ''
 })
 
+/** 超过该长度不在编辑框内加载正文，避免超大上传导致页面卡死 */
+const MAX_EDIT_CONTENT_CHARS = 300000
+
 // 编辑知识库
 const editKnowledge = (item) => {
+  const raw = item.content
+  if (typeof raw === 'string' && raw.length > MAX_EDIT_CONTENT_CHARS) {
+    ElMessage.warning(
+      '该条正文过长，无法在页面中编辑。请使用「下载源文件」查看完整内容，或删除后重新上传。'
+    )
+    return
+  }
   // 填充编辑表单数据
   editForm.value = {
     knowledge_id: item.id,
@@ -876,8 +898,14 @@ const getTypeName = (typeId) => {
   align-items: center;
 }
 
+.label-tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .setting-labels-btn {
-  margin-left: 16px;
   font-weight: 500;
 }
 

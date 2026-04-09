@@ -13,6 +13,9 @@ const api = axios.create(
     {
         baseURL: api_url, //这里配置的是后端服务提供的接口
         timeout: 200000,
+        // 大文件（如知识库 base64 上传）需放宽，否则浏览器/axios 可能按默认 ~10MB 限制请求体
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
         headers: {
             'Content-Type': 'application/json;charset=utf-8',
         },

@@ -13,8 +13,27 @@ from services.literature_service import siliconflow_deepseek_answer
 from core.utils import extract_json
 from core.sqlLiteExec import sqlite_execute
 import base64
+import hashlib
 import os
 executor = ThreadPoolExecutor()
+
+
+def _ensure_public_file_hash_schema() -> None:
+    """为 publicDatabase_file 增加 content_hash，并建 (category_id, content_hash) 索引；查重用一条 SQL，不靠遍历。"""
+    info = sqlite_execute("PRAGMA table_info(publicDatabase_file)")
+    if not info:
+        return
+    names = {row["name"] for row in info}
+    if "content_hash" not in names:
+        sqlite_execute(
+            "ALTER TABLE publicDatabase_file ADD COLUMN content_hash TEXT",
+            fetch="none",
+        )
+    sqlite_execute(
+        "CREATE INDEX IF NOT EXISTS idx_publicDatabase_file_category_content_hash "
+        "ON publicDatabase_file(category_id, content_hash)",
+        fetch="none",
+    )
 
 router = APIRouter(
     prefix="/get_knowledge",
@@ -134,20 +153,34 @@ async def upload_file(
     description: Optional[str] = Body(None, embed=True, description="文档描述"),
     tags: Optional[list[str]] = Body(None, embed=True, description="标签列表，如 ['钻井','深井']"),
 ):
- 
+    title_clean = (title or "").strip()
+    if not title_clean:
+        raise HTTPException(status_code=400, detail="文档标题不能为空")
 
-    # ── 3. Base64 解码 ─────────────────────────────────────────
+    # ── Base64 解码（先解码再按内容判重）────────────────────────
     try:
         file_bytes = base64.b64decode(base64_data)
     except Exception:
         raise HTTPException(status_code=400, detail="base64_data 解码失败，请确认字符串合法且不含 data: 前缀")
+
+    content_hash = hashlib.sha256(file_bytes).hexdigest()
+    _ensure_public_file_hash_schema()
+    dup = sqlite_execute(
+        "SELECT id FROM publicDatabase_file WHERE category_id=? AND content_hash=?",
+        (category_id, content_hash),
+    )
+    if dup:
+        raise HTTPException(
+            status_code=409,
+            detail="该分类下已存在相同内容的文件，未重复上传。",
+        )
  
-    # ── 4. 提取文件类型 ────────────────────────────────────────
+    # ── 提取文件类型 ───────────────────────────────────────────
     _, ext = os.path.splitext(filename)
     file_type = ext.lstrip(".").lower()   # 如 "pdf" / "docx"
     file_size = len(file_bytes)
  
-    # ── 5. 写入磁盘 ────────────────────────────────────────────
+    # ── 写入磁盘 ───────────────────────────────────────────────
     UPLOAD_ROOT = "./file_data"
     save_dir = os.path.join(UPLOAD_ROOT, str(category_id))
     os.makedirs(save_dir, exist_ok=True)
@@ -161,24 +194,24 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"文件写入失败: {e}")
  
-    # ── 6. 写入数据库 ──────────────────────────────────────────
+    # ── 写入数据库 ─────────────────────────────────────────────
     rel_path = f"{category_id}/{unique_name}"
     tags_json = json.dumps(tags, ensure_ascii=False) if tags else None
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
  
     try:
-         # 尝试插入文件记录
-         sqlite_execute(
+        # 尝试插入文件记录
+        sqlite_execute(
             """
             INSERT INTO publicDatabase_file
-                (category_id, title, file_path, file_type, file_size, description, tags, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (category_id, title, file_path, file_type, file_size, description, tags, created_at, updated_at, content_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (category_id, title, rel_path, file_type, file_size, description, tags_json, now, now),
+            (category_id, title_clean, rel_path, file_type, file_size, description, tags_json, now, now, content_hash),
         )
-         # 获取新插入的 ID
-         new_id_res = sqlite_execute("SELECT last_insert_rowid() as id")
-         new_id = new_id_res[0]['id'] if new_id_res else 0
+        # 获取新插入的 ID
+        new_id_res = sqlite_execute("SELECT last_insert_rowid() as id")
+        new_id = new_id_res[0]["id"] if new_id_res else 0
 
     except Exception as e:
         # 数据库写入失败时回滚已落盘的文件
@@ -191,7 +224,7 @@ async def upload_file(
         "data": {
             "id": new_id,
             "category_id": category_id,
-            "title": title,
+            "title": title_clean,
             "filename": filename,
             "file_path": rel_path,
             "file_type": file_type,

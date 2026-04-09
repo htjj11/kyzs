@@ -34,7 +34,7 @@
             </div>
             <template #tip>
               <div class="el-upload__tip">
-                支持格式：TXT, DOC, DOCX, PDF, MD, PPT, PPTX (单个文件不超过10MB)
+                支持格式：TXT, DOC, DOCX, PDF, MD, PPT, PPTX（单个文件不超过 {{ maxFileSizeMb }}MB）
               </div>
             </template>
           </el-upload>
@@ -78,6 +78,10 @@ const getBase64 = (file) => {
     reader.onerror = error => reject(error);
   });
 };
+
+// 单个文档最大体积（与后端校验一致）
+const maxFileSizeMb = 200
+const maxFileBytes = maxFileSizeMb * 1024 * 1024
 
 // 响应式数据
 const uploadType = ref('text') // 'text' 或 'document'
@@ -132,6 +136,13 @@ const handleFileSelect = (file) => {
   const fileExtension = raw.name.toLowerCase().substring(raw.name.lastIndexOf('.'))
   if (!allowedExtensions.includes(fileExtension)) {
     error.value = `文件 "${raw.name}" 格式不支持，已跳过`
+    const idx = fileList.value.findIndex(f => f.uid === file.uid)
+    if (idx !== -1) fileList.value.splice(idx, 1)
+    return
+  }
+
+  if (raw.size > maxFileBytes) {
+    error.value = `文件 "${raw.name}" 超过 ${maxFileSizeMb}MB，已跳过`
     const idx = fileList.value.findIndex(f => f.uid === file.uid)
     if (idx !== -1) fileList.value.splice(idx, 1)
     return
@@ -205,12 +216,16 @@ const uploadContent = async () => {
         })
       }
 
-      const response = await request.post('/add_to_knowledge/add_knowledge', {
-        data_dict: { data: dataList },
-        label_id: selectedTag.value,
-        type_id: 5,
-        user_id: getUserIdFromCookie()
-      })
+      const response = await request.post(
+        '/add_to_knowledge/add_knowledge',
+        {
+          data_dict: { data: dataList },
+          label_id: selectedTag.value,
+          type_id: 5,
+          user_id: getUserIdFromCookie(),
+        },
+        { timeout: 600000 }
+      )
 
       if (response && response.status === 200 && response.data.code === 200) {
         success.value = true

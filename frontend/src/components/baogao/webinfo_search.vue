@@ -12,6 +12,14 @@
     <div class="search-area">
 
 
+      <div class="provider-row">
+        <span class="provider-label">搜索源</span>
+        <el-radio-group v-model="searchProvider" size="default" class="provider-radios">
+          <el-radio-button value="xunfei">讯飞星火</el-radio-button>
+          <el-radio-button value="doubao">豆包（火山方舟）</el-radio-button>
+          <el-radio-button value="metaso">秘塔 AI</el-radio-button>
+        </el-radio-group>
+      </div>
       <div class="search-bar">
         <el-input v-model="queryText" placeholder="请输入需要总结的主题，例如：随钻地震、人工智能" clearable class="google-input"
           @keyup.enter="generateSummary" />
@@ -67,6 +75,8 @@ import getLabelList from '@/components/small/get_label_list.vue';
 
 // 响应式数据
 const queryText = ref('');
+/** xunfei | doubao | metaso，与后端 /get_source/get_online_infomation_summary 的 provider 一致 */
+const searchProvider = ref('xunfei');
 const loading = ref(false);
 const loadingText = ref('正在生成总结…');
 const resultData = ref(null);
@@ -164,7 +174,8 @@ const generateSummary = async () => {
   loading.value = true;
   try {
     const response = await axios.post('/get_source/get_online_infomation_summary', {
-      online_infomation: queryText.value.trim()
+      online_infomation: queryText.value.trim(),
+      provider: searchProvider.value,
     });
     console.log('API响应数据:', response.data);
 
@@ -239,6 +250,30 @@ const generateSummary = async () => {
   align-items: flex-start;
   max-width: 100%;
   margin-bottom: 12px;
+}
+
+.provider-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.provider-label {
+  font-size: 14px;
+  color: #5c6b8a;
+  flex-shrink: 0;
+}
+
+.provider-radios :deep(.el-radio-button__inner) {
+  border-radius: 20px;
+  padding: 8px 14px;
+}
+
+.has-result .provider-row {
+  margin-bottom: 10px;
 }
 
 /* ===== Hero 标题 ===== */
