@@ -10,12 +10,17 @@
       <!-- 顶部导航栏 -->
       <el-header class="header">
         <div class="header-content">
-          <h1 class="system-title">
-            <el-icon class="title-icon">
-              <Document />
+          <div class="header-left">
+            <el-icon class="collapse-btn" @click="isCollapse = !isCollapse">
+              <component :is="isCollapse ? 'Expand' : 'Fold'" />
             </el-icon>
-            科研情报系统
-          </h1>
+            <h1 class="system-title">
+              <el-icon class="title-icon">
+                <Document />
+              </el-icon>
+              科研情报系统
+            </h1>
+          </div>
           <div class="header-actions">
             <span class="id-value">{{ currentUserName }}</span>
 
@@ -49,10 +54,11 @@
 
       <el-container class="body-container">
         <!-- 侧边栏 -->
-        <el-aside class="sidebar">
+        <el-aside :class="['sidebar', { 'is-collapsed': isCollapse }]">
           <div class="sidebar-content">
-            <el-menu default-active="1" class="sidebar-menu" @open="handleOpen" @close="handleClose"
-              background-color="transparent" text-color="#4a5568" active-text-color="#3b82f6">
+            <el-menu :collapse="isCollapse" :collapse-transition="true" default-active="1" class="sidebar-menu"
+              @open="handleOpen" @close="handleClose" background-color="transparent" text-color="#4a5568"
+              active-text-color="#3b82f6">
               <el-sub-menu index="1" class="menu-group">
                 <template #title>
                   <div class="menu-title">
@@ -88,7 +94,7 @@
                 <div class="submenu-group">
                   <div class="group-label">报告智能体</div>
                   <el-menu-item index="6" class="menu-item">
-                    <el-icon class="eye-icon">👁‍🗨</el-icon>
+                    <el-icon class="eye-icon">👁</el-icon>
                     <router-link to="/report_view" class="menu-link">报告查看</router-link>
                   </el-menu-item>
                 </div>
@@ -204,12 +210,17 @@ import {
   EditPen,
   Edit,
   SwitchButton,
-  InfoFilled
+  InfoFilled,
+  Expand,
+  Fold
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import CountSetting from '@/components/zhanghu/count_setting.vue'
 import AboutSystem from '@/components/zhanghu/about_system.vue'
+
+// 侧边栏折叠状态
+const isCollapse = ref(false)
 
 // 当前cookie中的用户ID
 const currentUserId = ref<string | null>(null)
@@ -335,6 +346,23 @@ const handleClose = (key: string, keyPath: string[]) => {
   height: 100%;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.collapse-btn {
+  font-size: 20px;
+  cursor: pointer;
+  color: #e8edf5;
+  transition: color 0.3s;
+}
+
+.collapse-btn:hover {
+  color: #3b82f6;
+}
+
 .system-title {
   display: flex;
   align-items: center;
@@ -404,14 +432,20 @@ const handleClose = (key: string, keyPath: string[]) => {
 
 /* 侧边栏样式 — 白底、左蓝边框点缀 */
 .sidebar {
-  width: 260px !important;
+  width: 180px !important;
   background: #ffffff;
   border-right: 1px solid #d6dce6;
   overflow-y: auto;
+  transition: width 0.3s;
+}
+
+.sidebar.is-collapsed {
+  width: 64px !important;
 }
 
 .sidebar-content {
-  padding: 16px 12px;
+  padding: 16px 0;
+  /* 折叠收缩时去掉左右边距以保证对齐 */
 }
 
 .sidebar-menu {
@@ -494,6 +528,15 @@ const handleClose = (key: string, keyPath: string[]) => {
 }
 
 /* Element Plus 组件样式覆盖 */
+:deep(.el-menu) {
+  border-right: none;
+}
+
+:deep(.el-menu--collapse .el-sub-menu__title span),
+:deep(.el-menu--collapse .submenu-group) {
+  display: none;
+}
+
 :deep(.el-sub-menu__title) {
   height: 44px;
   line-height: 44px;
@@ -544,7 +587,7 @@ const handleClose = (key: string, keyPath: string[]) => {
   }
 
   .sidebar {
-    width: 220px !important;
+    width: 180px !important;
   }
 
   .system-title {

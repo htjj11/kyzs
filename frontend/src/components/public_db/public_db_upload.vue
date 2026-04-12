@@ -63,6 +63,7 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import request from '@/api/request'
+import { getUserIdFromCookie } from '@/utils/authUtils'
 
 const props = defineProps({
     categoryId: {
@@ -156,7 +157,8 @@ const startUpload = async () => {
                 base64_data: base64Data,
                 title: item.title,
                 description: item.description,
-                tags: item.tags
+                tags: item.tags,
+                user_id: getUserIdFromCookie()
             }
 
             const response = await request.post('/get_knowledge/upload_file', payload)

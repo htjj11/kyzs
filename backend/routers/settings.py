@@ -26,7 +26,7 @@ async def get_all_prompt(
     result = sqlite_execute("SELECT * FROM `prompt` WHERE user_id=?", (user_id,))
     return {"code": 200, "msg": 'success', "data": result}
 
-
+#添加提示词
 @router.post("/add_prompt")
 async def add_prompt(
     request: Request,
@@ -39,6 +39,7 @@ async def add_prompt(
         "INSERT INTO `prompt` (user_id, name, text, type) VALUES (?, ?, ?, ?)",
         (user_id, name, text, int(type))
     )
+    print(prompt_result)
     return {"code": 200, "msg": 'success', "data": prompt_result}
 
 

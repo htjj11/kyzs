@@ -9,7 +9,7 @@ router = APIRouter(
     tags=["系统设置相关接口"],
 )
 
-
+#登录校验
 @router.post('/login')
 async def login_api(
     request: Request,
@@ -24,7 +24,20 @@ async def login_api(
         (username, password)
     )
     if user_result:
-        return {"code": 200, "msg": 'success', "data": {"user_id": user_result[0]['id'], "user_name": username}}
+        # 获取用户权限表
+        sql = """
+        SELECT permission
+        FROM user_permissions
+        WHERE user_id = ?
+        """
+        permission_result = sqlite_execute(sql, (user_result[0]['id'],))
+
+        # 将 [{'permission': 'xxx'}, ...] 转换为 ['xxx', ...]
+        permission_list = [item['permission'] for item in permission_result] if permission_result else []
+        print("用户权限:", permission_list)
+        return {"code": 200, "msg": 'success', "data": {"user_id": user_result[0]['id'], "user_name": username, "permission": permission_list}}
+
     else:
         return {"code": 400, "msg": 'fail', "data": {"msg": "用户名或密码错误"}}
  
+#

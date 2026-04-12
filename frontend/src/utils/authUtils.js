@@ -105,10 +105,52 @@ export function getExpireTimeFromCookie() {
 }
 
 /**
+ * 设置permission
+ * @param {string|null|object} permission 用户权限，设为null表示清除cookie
+ * @param {number} minutes 过期时间（分钟）
+ */
+export function setPermissionCookie(permission, minutes = 30) {
+  if (permission === null) {
+    document.cookie = 'permission=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  } else {
+    const encodedValue = encodeURIComponent(typeof permission === 'string' ? permission : JSON.stringify(permission));
+    const expires = new Date();
+    expires.setTime(expires.getTime() + minutes * 60 * 1000);
+    document.cookie = `permission=${encodedValue}; expires=${expires.toUTCString()}; path=/;`;
+  }
+}
+
+/**
+ * 从cookie中获取permission
+ * @returns {any} 用户权限
+ */
+export function getPermissionCookie() {
+  try {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('permission='))
+      ?.split('=')[1];
+    if (cookieValue) {
+        const decoded = decodeURIComponent(cookieValue);
+        try {
+            return JSON.parse(decoded);
+        } catch {
+            return decoded;
+        }
+    }
+    return null;
+  } catch (error) {
+    console.error('获取cookie中的permission失败:', error);
+    return null;
+  }
+}
+
+/**
  * 清除登录状态（注销）
  */
 export function logoutUser() {
   setUserIdCookie(null);
   setUserNameCookie(null);
   setExpireTimeCookie(null);
+  setPermissionCookie(null);
 }

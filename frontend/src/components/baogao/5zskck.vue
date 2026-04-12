@@ -15,11 +15,15 @@
         </div>
         <div class="label-tabs-actions">
           <el-button type="primary" @click="goFileUpload">
-            <el-icon><Upload /></el-icon>
+            <el-icon>
+              <Upload />
+            </el-icon>
             个人资料上传
           </el-button>
           <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
-            <el-icon><Setting /></el-icon> 标签设置
+            <el-icon>
+              <Setting />
+            </el-icon> 标签设置
           </el-button>
         </div>
       </div>
@@ -71,11 +75,23 @@
       </div>
 
       <div v-else>
-        <div class="data-summary">
-          <span>共 {{ filteredKnowledgeList.length }} 条记录（原始数据：{{ knowledgeList.length }} 条）</span>
+        <div class="data-header">
+          <div class="data-summary">
+            <span>共 {{ filteredKnowledgeList.length }} 条记录（原始数据：{{ knowledgeList.length }} 条）</span>
+          </div>
+          <div class="view-switch">
+            <el-radio-group v-model="viewMode" size="small">
+              <el-radio-button label="card"><el-icon style="vertical-align: middle; margin-right: 2px;">
+                  <Grid />
+                </el-icon>卡片</el-radio-button>
+              <el-radio-button label="list"><el-icon style="vertical-align: middle; margin-right: 2px;">
+                  <List />
+                </el-icon>列表</el-radio-button>
+            </el-radio-group>
+          </div>
         </div>
 
-        <div class="knowledge-list">
+        <div :class="['knowledge-list', viewMode === 'list' ? 'list-view' : 'card-view']">
           <div v-for="item in filteredKnowledgeList" :key="item.id" class="knowledge-item">
             <div class="item-header">
               <h3 class="item-title">{{ item.title }}</h3>
@@ -111,7 +127,8 @@
   </div>
 
   <!-- 知识库详情弹窗（全屏） -->
-  <el-dialog v-model="showDetailModal" title="知识库详情" fullscreen :before-close="closeDetailModal" append-to-body>
+  <el-dialog v-model="showDetailModal" title="知识库详情" fullscreen :before-close="closeDetailModal" append-to-body
+    class="detail-full-dialog">
     <template #default>
       <show-knowledge-info v-if="selectedKnowledgeItem" :knowledgeData="selectedKnowledgeItem" :show-actions="true"
         @edit="handleDetailEdit" @delete="handleDetailDelete" @close="closeDetailModal" />
@@ -245,7 +262,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/api/request'
 import { ElMessage, ElMessageBox, ElSelect, ElOption, ElLoading } from 'element-plus'
-import { Setting, Upload } from '@element-plus/icons-vue'
+import { Setting, Upload, Grid, List } from '@element-plus/icons-vue'
 import ShowKnowledgeInfo from '@/components/small/show_knowledge_info.vue'
 import SettingLabel from '@/components/small/setting_label.vue'
 
@@ -253,6 +270,9 @@ const router = useRouter()
 const goFileUpload = () => {
   router.push('/fileUpload')
 }
+
+// 视图模式：card 或 list
+const viewMode = ref('card')
 
 // 知识库列表数据
 const knowledgeList = ref([])
@@ -738,7 +758,7 @@ const getTypeName = (typeId) => {
 
 <style scoped>
 .knowledge-base-container {
-  padding: 20px;
+  padding: 12px 16px;
   background-color: #f5f7fa;
   min-height: 100vh;
 }
@@ -753,16 +773,16 @@ const getTypeName = (typeId) => {
 
 .filter-section {
   background: white;
-  padding: 20px;
+  padding: 12px 16px;
   border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .filter-row {
   display: flex;
-  gap: 20px;
-  margin-bottom: 15px;
+  gap: 12px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
@@ -813,7 +833,7 @@ const getTypeName = (typeId) => {
 }
 
 .form-item {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .form-label {
@@ -834,16 +854,17 @@ const getTypeName = (typeId) => {
 .filter-item label {
   font-weight: 500;
   color: #666;
-  min-width: 80px;
+  min-width: 70px;
+  font-size: 13px;
 }
 
 .filter-input,
 .el-select {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
-  min-width: 200px;
+  font-size: 13px;
+  min-width: 160px;
   box-sizing: border-box;
 }
 
@@ -860,10 +881,10 @@ const getTypeName = (typeId) => {
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -890,8 +911,8 @@ const getTypeName = (typeId) => {
 
 /* 标签页样式 */
 .label-tabs-container {
-  margin: 16px 0;
-  padding: 0 0 8px 0;
+  margin: 0 0 8px 0;
+  padding: 0 0 4px 0;
   border-bottom: 1px solid #e8e8e8;
   display: flex;
   justify-content: space-between;
@@ -912,16 +933,16 @@ const getTypeName = (typeId) => {
 .label-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
 }
 
 .label-tab {
-  padding: 8px 16px;
+  padding: 4px 12px;
   border: 1px solid #d9d9d9;
   background: #fff;
   color: #666;
   border-radius: 4px 4px 0 0;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
   border-bottom: 2px solid transparent;
@@ -953,9 +974,9 @@ const getTypeName = (typeId) => {
 
 .data-section {
   background: white;
-  padding: 20px;
+  padding: 12px 16px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .loading-state,
@@ -980,16 +1001,102 @@ const getTypeName = (typeId) => {
   cursor: pointer;
 }
 
+.data-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
 .data-summary {
-  margin-bottom: 20px;
   color: #666;
   font-size: 14px;
 }
 
 .knowledge-list {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+
+.knowledge-list.card-view {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.knowledge-list.list-view {
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid #e8e8e8;
+}
+
+.knowledge-list.list-view .knowledge-item {
+  display: grid;
+  grid-template-columns: 150px 60px 100px 120px minmax(200px, 1fr) 120px 220px;
+  align-items: center;
+  height: 48px;
+  padding: 0 12px;
+  gap: 12px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #e8e8e8;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.knowledge-list.list-view .knowledge-item:hover {
+  background-color: #f0f7ff;
+}
+
+.knowledge-list.list-view .item-header,
+.knowledge-list.list-view .item-meta,
+.knowledge-list.list-view .item-content,
+.knowledge-list.list-view .item-footer {
+  display: contents;
+}
+
+.knowledge-list.list-view .item-title {
+  margin: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.knowledge-list.list-view .meta-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  background: transparent;
+  color: #666;
+}
+
+.knowledge-list.list-view .item-content p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: #888;
+}
+
+.knowledge-list.list-view .mark-info {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.knowledge-list.list-view .item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.knowledge-list.list-view .action-btn {
+  padding: 2px 6px;
+  font-size: 11px;
 }
 
 .knowledge-item {
@@ -1007,7 +1114,7 @@ const getTypeName = (typeId) => {
 }
 
 .item-header {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .item-title {
@@ -1033,7 +1140,7 @@ const getTypeName = (typeId) => {
 }
 
 .item-content {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: #666;
   line-height: 1.4;
   font-size: 12px;
@@ -1130,5 +1237,26 @@ const getTypeName = (typeId) => {
     width: 100%;
     justify-content: space-between;
   }
+}
+
+/* 详情对话框样式：撑满全屏并移除外层滚动条 */
+:deep(.detail-full-dialog) {
+  display: flex !important;
+  flex-direction: column;
+  margin: 0 !important;
+}
+
+:deep(.detail-full-dialog .el-dialog__body) {
+  flex: 1;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.detail-full-dialog .el-dialog__header) {
+  margin-right: 0;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
 }
 </style>

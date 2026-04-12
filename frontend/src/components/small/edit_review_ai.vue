@@ -66,7 +66,9 @@
           <div class="step-header">
             <h3 class="step-title">第二步:选择预设提示词</h3>
             <el-button type="primary" link @click="showSettingFormatModal = true" class="setting-btn">
-              <el-icon><Setting /></el-icon> 提示词设置
+              <el-icon>
+                <Setting />
+              </el-icon> 提示词设置
             </el-button>
           </div>
           <div class="prompt-filter-row">
@@ -98,7 +100,21 @@
               <el-checkbox v-model="quoteOriginalText" @change="handleQuoteChange">引用选中原文</el-checkbox>
             </div>
             <el-input v-model="inputDemand" placeholder="请输入需求" clearable type="textarea" :rows="6"
-              style="width: 100%; height: 100%;" />
+              style="width: 100%; margin-bottom: 12px;" />
+
+            <!-- 模型选择区域 -->
+            <div class="model-selection-area">
+              <div class="model-title">选择生成模型：</div>
+              <el-radio-group v-model="modelProvider" size="small">
+                <el-radio-button label="changcheng">长城大模型</el-radio-button>
+                <el-radio-button label="siliconflow_deepseek">互联网模型</el-radio-button>
+              </el-radio-group>
+              <div v-if="modelProvider === 'siliconflow_deepseek'" class="security-warning">
+                <el-icon>
+                  <Warning />
+                </el-icon>网络模型虽好，请不要输入涉密信息哦！
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -126,7 +142,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Setting } from '@element-plus/icons-vue';
+import { Warning, Setting } from '@element-plus/icons-vue';
 import request from '@/api/request';
 import { getUserIdFromCookie } from '@/utils/authUtils';
 import SettingFormat from '@/components/small/setting_format.vue';
@@ -159,8 +175,9 @@ const filterTypeId = ref(''); // 类型ID筛选
 const promptList = ref([]); // 提示词列表
 const filteredPromptList = ref([]); // 筛选后的提示词列表
 const selectedPromptIds = ref([]); // 选中的提示词ID
-const inputDemand = ref(  ''); // 用户输入的需求
+const inputDemand = ref(''); // 用户输入的需求
 const quoteOriginalText = ref(false); // 是否引用原文
+const modelProvider = ref('changcheng'); // 模型提供方：changcheng 或 siliconflow_deepseek
 const showSettingFormatModal = ref(false); // 是否显示提示词设置弹窗
 
 // 筛选条件
@@ -352,7 +369,8 @@ const handleSubmit = async () => {
     const response = await request.post('/get_review/get_summary_by_ai', {
       knowledge_ids: selectedKnowledgeIds.value,
       prompt_ids: selectedPromptIds.value,
-      user_need: inputDemand.value
+      user_need: inputDemand.value,
+      model_provider: modelProvider.value
     });
 
     if (response && response.data && response.data.code === 200) {
@@ -650,6 +668,32 @@ const handleCancel = () => {
   gap: 12px;
   padding: 16px 0;
   border-top: 1px solid #e4e7ed;
+}
+
+/* 模型选择样式 */
+.model-selection-area {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed #e4e7ed;
+}
+
+.model-title {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.security-warning {
+  margin-top: 10px;
+  color: #f56c6c;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #fef0f0;
+  padding: 6px 10px;
+  border-radius: 4px;
 }
 
 /* 滚动条样式 */

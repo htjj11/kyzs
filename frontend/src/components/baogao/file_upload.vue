@@ -1,11 +1,15 @@
 <template>
   <div class="container">
-    <!-- 上传类型切换 -->
-    <div class="upload-type">
-      <el-radio-group v-model="uploadType">
-        <el-radio-button value="text">纯文本</el-radio-button>
-        <el-radio-button value="document">文档</el-radio-button>
-      </el-radio-group>
+    <!-- 上传头部结构 -->
+    <div class="upload-header">
+      <div class="upload-type">
+        <span class="type-label">上传类型选择：</span>
+        <el-radio-group v-model="uploadType">
+          <el-radio-button value="text">纯文本</el-radio-button>
+          <el-radio-button value="document">文档</el-radio-button>
+        </el-radio-group>
+      </div>
+      <el-button type="default" @click="goBackToKnowledgeBase">返回个人知识库</el-button>
     </div>
 
     <!-- 纯文本上传区域 -->
@@ -68,6 +72,7 @@ import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import request from '@/api/request';
 import { getUserIdFromCookie } from '@/utils/authUtils.js';
+import { useRouter } from 'vue-router';
 
 // 将文件转换为base64编码字符串的函数
 const getBase64 = (file) => {
@@ -96,6 +101,11 @@ const textTitle = ref('')
 // 标签相关数据
 const userTags = ref([])
 const selectedTag = ref(null)
+
+const router = useRouter()
+const goBackToKnowledgeBase = () => {
+  router.push('/zskck')
+}
 
 // 检查是否可以上传
 const canUpload = () => {
@@ -272,9 +282,23 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.upload-type {
+.upload-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
-  text-align: left;
+}
+
+.upload-type {
+  display: flex;
+  align-items: center;
+}
+
+.type-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+  margin-right: 12px;
 }
 
 .upload-type :deep(.el-radio-group) {

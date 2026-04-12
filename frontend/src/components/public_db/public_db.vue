@@ -73,7 +73,21 @@
                                 </el-button>
                             </template>
                         </el-input>
-                        <el-button type="primary" class="square-btn" :disabled="!selectedNode"
+                        <el-button type="success" class="square-btn" @click="showChatModal = true">
+                            <el-icon>
+                                <ChatDotRound />
+                            </el-icon> 知识库对话
+                        </el-button>
+                        <el-tooltip v-if="!hasUploadPermission" content="您没有权限上传公共知识库文件" placement="top">
+                            <span style="display: inline-block; cursor: not-allowed;">
+                                <el-button type="primary" class="square-btn" disabled style="pointer-events: none;">
+                                    <el-icon>
+                                        <Upload />
+                                    </el-icon> 上传文档
+                                </el-button>
+                            </span>
+                        </el-tooltip>
+                        <el-button v-else type="primary" class="square-btn" :disabled="!selectedNode"
                             @click="showUploadModal = true">
                             <el-icon>
                                 <Upload />
@@ -101,7 +115,14 @@
                             <el-table-column label="操作" width="150" align="center">
                                 <template #default="scope">
                                     <el-button link type="primary" @click="viewDocument(scope.row)">查看</el-button>
-                                    <el-button link type="danger" @click="deleteDocument(scope.row)">删除</el-button>
+                                    <el-tooltip v-if="!hasDeletePermission" content="您没有删除公共知识库权限" placement="top">
+                                        <span style="display: inline-block; cursor: not-allowed; margin-left: 12px;">
+                                            <el-button link type="danger" disabled
+                                                style="pointer-events: none;">删除</el-button>
+                                        </span>
+                                    </el-tooltip>
+                                    <el-button v-else link type="danger" @click="deleteDocument(scope.row)"
+                                        style="margin-left: 12px;">删除</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -137,22 +158,31 @@
                 </div>
             </template>
         </el-dialog>
+
+        <!-- 对话弹窗 -->
+        <el-dialog v-model="showChatModal" title="知识库智能对话" width="80%" top="5vh" append-to-body destroy-on-close
+            class="scientific-dialog">
+            <public_db_chat />
+        </el-dialog>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getPermissionCookie, getUserIdFromCookie } from '@/utils/authUtils'
 import {
     Refresh,
     Folder,
     Document,
     Search,
-    Upload
+    Upload,
+    ChatDotRound
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
 import public_db_upload from './public_db_upload.vue'
 import public_db_view from './public_db_view.vue'
+import public_db_chat from './public_db_chat.vue'
 
 const loadingStructure = ref(false)
 const loadingDocuments = ref(false)
@@ -166,6 +196,17 @@ const searchQuery = ref('')
 const documentList = ref([])
 const searchResults = ref([])
 const showSearchModal = ref(false)
+const showChatModal = ref(false)
+
+const hasDeletePermission = computed(() => {
+    const permissions = getPermissionCookie() || []
+    return Array.isArray(permissions) ? permissions.includes('public_db_document:delete') : false
+})
+
+const hasUploadPermission = computed(() => {
+    const permissions = getPermissionCookie() || []
+    return Array.isArray(permissions) ? permissions.includes('public_db_document:upload') : false
+})
 
 const defaultProps = {
     children: 'children',
@@ -311,8 +352,27 @@ const deleteDocument = (row) => {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-    }).then(() => {
-        ElMessage.success('删除成功')
+    }).then(async () => {
+        try {
+            const response = await request.post('/get_knowledge/delete_public_file_by_id', {
+                file_id: row.id,
+                user_id: getUserIdFromCookie()
+            })
+            if (response.data && response.data.code === 200) {
+                ElMessage.success('删除成功')
+                // 刷新文档列表
+                if (selectedNode.value) {
+                    fetchDocuments(selectedNode.value.id)
+                }
+            } else {
+                ElMessage.error('删除失败：' + (response.data?.msg || '未知错误'))
+            }
+        } catch (error) {
+            console.error('删除文档错误:', error)
+            ElMessage.error('删除文档失败')
+        }
+    }).catch(() => {
+        // 取消删除
     })
 }
 
@@ -370,7 +430,7 @@ onMounted(() => {
 
 /* 侧边栏样式 */
 .db-sidebar {
-    width: 450px;
+    width: 350px;
     border-right: 1px solid #ebeef5;
     display: flex;
     flex-direction: column;

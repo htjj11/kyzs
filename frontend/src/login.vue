@@ -78,7 +78,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, WarningFilled, Monitor, ArrowRight } from '@element-plus/icons-vue'
 import request from './api/request'
-import { setUserIdCookie, setUserNameCookie, setExpireTimeCookie } from './utils/authUtils'
+import { setUserIdCookie, setUserNameCookie, setExpireTimeCookie, setPermissionCookie } from './utils/authUtils'
 
 const router = useRouter()
 const isLoading = ref(false)
@@ -124,12 +124,15 @@ const handleLogin = async () => {
       // 登录成功，获取用户ID
       const userId = response.data.data.user_id
       const userName = response.data.data.user_name
+      const permission = response.data.data.permission
 
       // 使用统一的authUtils中的函数设置cookie
       setUserIdCookie(userId, 30)
       // 设置user_name
       setUserNameCookie(userName)
-      
+      // 设置permission
+      setPermissionCookie(permission, 30)
+
       // 设置单独的截止日期字段 (当前时间 + 30分钟的时间戳)
       const expireTimestamp = new Date().getTime() + 30 * 60 * 1000;
       setExpireTimeCookie(expireTimestamp, 30)

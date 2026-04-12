@@ -1,5 +1,6 @@
 import requests
-from config import settings
+import json
+
 
 
 def _normalize_metaso_to_xunfei_shape(result: dict) -> dict:
@@ -161,13 +162,14 @@ def _normalize_ark_responses_api(data: dict) -> dict:
     }
 
 
+#========大模型接口========
+
+#秘塔 AI 联网搜索
 def get_metaso_api(keyword: str):
     """秘塔 AI 联网搜索（官方 Open API：POST /api/open/search/v2）"""
-    if not settings.metaso_api_key:
-        return {"choices": [], "error": "未配置秘塔 API Key，请在 .env 中设置 metaso_api_key"}
     url = "https://metaso.cn/api/open/search/v2"
     headers = {
-        "Authorization": f"Bearer {settings.metaso_api_key}",
+        "Authorization": f"Bearer mk-469D57C55291BFE89EF26A3DD8E7CA2A",
         "Content-Type": "application/json",
     }
     body = {"question": keyword, "lang": "zh", "stream": False}
@@ -182,22 +184,17 @@ def get_metaso_api(keyword: str):
     except requests.RequestException as e:
         return {"choices": [], "error": str(e)}
 
-
+#火山方舟豆包+联网搜索
 def get_doubao_ark_api(keyword: str):
     """
     火山方舟豆包 + 联网搜索：使用 Responses API（/responses + tools: web_search）。
     Chat Completions 与 web_search 组合易报 missing tools.function，与官方示例一致走 Responses。
     文档：https://www.volcengine.com/docs/82379/1756990
     """
-    if not settings.doubao_ark_api_key or not settings.doubao_ark_model:
-        return {
-            "choices": [],
-            "error": "未配置豆包 Ark：请在 .env 中设置 doubao_ark_api_key 与 doubao_ark_model（推理接入点 ID）",
-        }
-    base = (settings.doubao_ark_base_url or "").rstrip("/")
+    base = ('https://ark.cn-beijing.volces.com/api/v3' or "").rstrip("/")
     url = f"{base}/responses"
     payload = {
-        "model": settings.doubao_ark_model,
+        "model": 'doubao-seed-1-8-251228',
         "stream": False,
         "tools": [{"type": "web_search"}],
         "input": [
@@ -208,7 +205,7 @@ def get_doubao_ark_api(keyword: str):
         ],
     }
     headers = {
-        "Authorization": f"Bearer {settings.doubao_ark_api_key}",
+        "Authorization": f"Bearer fd42966b-565f-40f1-a857-3465c8d51bde",
         "Content-Type": "application/json",
     }
     try:
@@ -222,20 +219,7 @@ def get_doubao_ark_api(keyword: str):
     except requests.RequestException as e:
         return {"choices": [], "error": str(e)}
 
-
-def fetch_online_infomation_summary(keyword: str, provider: str = "xunfei"):
-    """
-    联网摘要：provider 可选 xunfei | doubao | metaso
-    """
-    p = (provider or "xunfei").strip().lower()
-    if p in ("doubao", "ark", "volcengine"):
-        return get_doubao_ark_api(keyword)
-    if p == "metaso":
-        return get_metaso_api(keyword)
-    return get_xunfei_api(keyword)
-
-
-#基于讯飞网络知识检索获取信息
+#讯飞网络知识检索获取信息
 def get_xunfei_api(keyword: str):
     def xunfei_online_search(question):
         url = "https://spark-api-open.xf-yun.com/v1/chat/completions"
@@ -290,7 +274,8 @@ def get_xunfei_api(keyword: str):
 
     return xunfei_online_search(keyword)
 
-#基于ai回答问题
+
+#基于ai回答问题（硅基流动互联网模型）
 def siliconflow_deepseek_answer(question):
     """
     调用 SiliconFlow 托管的 DeepSeek-V3 模型进行问答。
@@ -330,3 +315,46 @@ def siliconflow_deepseek_answer(question):
     content = response.json()['choices'][0]['message']['content']
     print(f"deepseek返回: {content}")
     return content
+
+
+#基于内网长城ai回答
+def changcheng_ai_answer(question):
+    """
+    调用长城AI进行问答。
+    由于该接口返回的是 Ollama 格式的 NDJSON 流，此处进行同步转换，获取完整回复。
+    """
+    url = "http://10.68.249.59:33331/api/generate"
+    payload = {"prompt": str(question)}
+    try:
+        # 使用 stream=True 调用
+        response = requests.post(url, json=payload, stream=True, timeout=120)
+        response.raise_for_status()
+
+        full_content = ""
+        for line in response.iter_lines():
+            if line:
+                data = json.loads(line.decode('utf-8'))
+                full_content += data.get("response", "")
+                if data.get("done"):
+                    break
+
+        print(f"长城AI返回: {full_content}")
+        return full_content
+    except Exception as e:
+        print(f"调用长城AI出错: {e}")
+        return f"调用长城AI失败: {str(e)}"
+
+#========方法========
+#获取联网信息摘要
+def fetch_online_infomation_summary(keyword: str, provider: str = "xunfei"):
+    """
+    联网摘要：provider 可选 xunfei | doubao | metaso
+    """
+    p = (provider or "xunfei").strip().lower()
+    if p in ("doubao", "ark", "volcengine"):
+        return get_doubao_ark_api(keyword)
+    if p == "metaso":
+        return get_metaso_api(keyword)
+    return get_xunfei_api(keyword)
+
+

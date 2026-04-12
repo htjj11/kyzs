@@ -32,17 +32,15 @@
     <div class="knowledge-actions" v-if="showActions">
       <button @click="onEdit" class="btn edit-btn" v-if="onEdit">编辑</button>
       <button @click="onDelete" class="btn delete-btn" v-if="onDelete">删除</button>
-      <!-- 添加到大模型知识库按钮 -->
-      <button @click="onAddToKnowledgeBase" :disabled="knowledgeData.in_anything === 1 || isAdding"
-        :class="['btn', knowledgeData.in_anything === 1 ? 'added-btn' : 'add-btn']"
-        :title="knowledgeData.in_anything === 1 ? '请到大模型知识库管理界面删除' : '添加到大模型知识库'">
-        {{ isAdding ? '添加中...' : (knowledgeData.in_anything === 1 ? '已添加到大模型知识库' : '添加到大模型知识库') }}
+      <!-- 转移到公共知识库按钮 -->
+      <button @click="openTransferDialog" class="btn add-btn" title="上传公共知识库">
+        上传公共知识库
       </button>
       <button @click="onClose" class="btn close-btn" v-if="onClose">关闭</button>
     </div>
 
-    <!-- 文件夹选择对话框组件 -->
-    <GetFolder v-model:visible="showFolderDialog" @confirm="handleFolderSelected" />
+    <!-- 知识库分类选择对话框组件 -->
+    <CategoryTransferDialog v-model:visible="showTransferDialog" @confirm="confirmTransfer" />
   </div>
 </template>
 
@@ -50,7 +48,8 @@
 import { defineEmits, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api/request'
-import GetFolder from './get_folder.vue'
+import { getUserIdFromCookie } from '@/utils/authUtils'
+import CategoryTransferDialog from './category_transfer_dialog.vue'
 
 // 定义组件属性
 const props = defineProps({
@@ -99,9 +98,46 @@ const displayContent = computed(() => {
 })
 
 // 添加加载状态
-const isAdding = ref(false)
-// 控制文件夹选择对话框的显示
-const showFolderDialog = ref(false)
+// 添加加载状态
+const isTransferring = ref(false)
+const showTransferDialog = ref(false)
+
+// 打开对话框
+const openTransferDialog = () => {
+  showTransferDialog.value = true
+}
+
+// 确定转移
+const confirmTransfer = async (selectedNode) => {
+  if (!selectedNode) return
+  isTransferring.value = true
+  try {
+    const response = await api.post('/get_knowledge/transfer_to_public', {
+      user_id: getUserIdFromCookie(),
+      knowledge_id: props.knowledgeData.id,
+      category_id: selectedNode.id
+    })
+    if (response.data && response.data.code === 200) {
+      ElMessage.success('成功转移到公共知识库')
+      showTransferDialog.value = false
+    } else {
+      ElMessage.error(response.data?.detail || response.data?.msg || '转移失败')
+    }
+  } catch (error) {
+    if (error.response && error.response.status === 409) {
+      ElMessage.warning('目标分类下已存在该内容，跳过重复上传')
+      showTransferDialog.value = false
+    } else if (error.response && error.response.status === 403) {
+      ElMessage.error('您没有上传到公共知识库的权限')
+      showTransferDialog.value = false
+    } else {
+      console.error('转移失败:', error)
+      ElMessage.error('转移失败，请稍后重试')
+    }
+  } finally {
+    isTransferring.value = false
+  }
+}
 
 // 编辑操作
 const onEdit = () => {
@@ -117,68 +153,22 @@ const onDelete = () => {
 const onClose = () => {
   emit('close')
 }
-
-// 添加到大模型知识库操作
-const onAddToKnowledgeBase = () => {
-  if (props.knowledgeData.in_anything === 1 || isAdding.value) {
-    return
-  }
-
-  // 显示文件夹选择对话框
-  showFolderDialog.value = true
-}
-
-// 处理文件夹选择结果
-const handleFolderSelected = async (folderData) => {
-  if (!folderData || !folderData.id) {
-    return
-  }
-
-  try {
-    isAdding.value = true
-
-    // 调用接口，传递知识ID和选择的文件夹ID
-    const response = await api.post('/llm/add_knowledge_to_anythingllm', {
-      knowledge_id: props.knowledgeData.id,
-      folder_id: folderData.id
-    })
-
-    // 检查响应
-    if (response.data && response.data.code === 200 && response.data.msg === 'success') {
-      ElMessage.success('添加到公共知识库成功')
-      // 通知父组件更新状态
-      emit('updateStatus', {
-        id: props.knowledgeData.id,
-        in_anything: 1
-      })
-      // 同时触发原有的添加事件
-      emit('addToKnowledgeBase', props.knowledgeData)
-    } else {
-      ElMessage.error('添加失败：' + (response.data?.msg || '未知错误'))
-    }
-  } catch (error) {
-    console.error('添加到大模型知识库失败:', error)
-    ElMessage.error('添加失败，请稍后重试')
-  } finally {
-    isAdding.value = false
-  }
-}
 </script>
 
 <style scoped>
 .knowledge-info-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 24px;
-  max-width: 800px;
-  margin: 0 auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  padding: 16px 24px;
 }
 
 .knowledge-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  flex: 0 0 auto;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -205,7 +195,10 @@ const handleFolderSelected = async (folderData) => {
 }
 
 .knowledge-content {
-  margin-bottom: 20px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-bottom: 16px;
 }
 
 .content-section {
@@ -257,8 +250,6 @@ const handleFolderSelected = async (folderData) => {
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
-  max-height: min(70vh, 800px);
-  overflow: auto;
 }
 
 .mark-section {
@@ -281,6 +272,7 @@ const handleFolderSelected = async (folderData) => {
 }
 
 .knowledge-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 12px;
   justify-content: flex-end;

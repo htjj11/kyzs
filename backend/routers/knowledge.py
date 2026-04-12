@@ -15,6 +15,7 @@ from core.sqlLiteExec import sqlite_execute
 import base64
 import hashlib
 import os
+import requests
 executor = ThreadPoolExecutor()
 
 
@@ -139,6 +140,124 @@ async def get_file_by_id(
         return {"code": 500, "msg": 'error', "data": str(e)}
 
 
+#将个人知识库的内容转移到公共知识库接口
+@router.post("/transfer_to_public", summary="将个人知识转为公共知识文件")
+async def transfer_to_public(
+    request: Request,
+    user_id: int = Body(..., embed=True, description="操作用户id"),
+    knowledge_id: int = Body(..., embed=True, description="个人知识库知识id"),
+    category_id: int = Body(..., embed=True, description="公共知识库目标分类id")
+):
+    # 0. 权限校验，判断用户是否拥有 public_db_document:upload 上传权限
+    perm_check_sql = """
+        SELECT permission
+        FROM user_permissions
+        WHERE user_id = ? AND permission = 'public_db_document:upload'
+    """
+    perm_result = sqlite_execute(perm_check_sql, (user_id,))
+    if not perm_result:
+        raise HTTPException(status_code=403, detail="您没有权限操作公共知识库文件")
+
+    # 1. 提取个人知识库信息
+    knowledge_info = sqlite_execute("SELECT * FROM `knowledgebase` WHERE id=?", (knowledge_id,))
+    if not knowledge_info:
+        raise HTTPException(status_code=404, detail="未找到对应的个人知识记录")
+    
+    k_info = knowledge_info[0]
+    
+    import ast
+    # 2. 获取文件存储地址与实际字节内容
+    # 如果判断属于文件类型（type_id=5且存在original_filename）
+    if k_info['type_id'] == 5 and 'original_filename' in k_info['mark_info']:
+        try:
+            mark_dict = ast.literal_eval(k_info['mark_info'])
+            filename = mark_dict['filename'] # 在 file_data 下的存储名
+            original_filename = mark_dict['original_filename'] # 用户看到的名字
+        except Exception:
+            raise HTTPException(status_code=400, detail="解析个人知识库文件信息失败")
+        
+        source_path = f"file_data/{filename}"
+        if not os.path.exists(source_path):
+            raise HTTPException(status_code=404, detail="个人知识库本地文件已丢失")
+            
+        with open(source_path, "rb") as f:
+            file_bytes = f.read()
+    else:
+        # 如果是纯文本类型，直接将其内容转化为 txt 虚拟文件流做知识归档
+        original_filename = f"{k_info.get('title', '未知纯文本知识')}.txt"
+        file_bytes = k_info['content'].encode('utf-8')
+        
+    title_clean = k_info.get('title', original_filename).strip()
+    
+    # 3. 计算 Hash 查重
+    content_hash = hashlib.sha256(file_bytes).hexdigest()
+    _ensure_public_file_hash_schema()
+    dup = sqlite_execute(
+        "SELECT id FROM publicDatabase_file WHERE category_id=? AND content_hash=?",
+        (category_id, content_hash),
+    )
+    if dup:
+        raise HTTPException(status_code=409, detail="公共库该分类下已存在相同内容的文件，防重复上传。")
+        
+    # 4. 写入公共服务磁盘对应分类目录
+    _, ext = os.path.splitext(original_filename)
+    file_type = ext.lstrip(".").lower()
+    file_size = len(file_bytes)
+    
+    UPLOAD_ROOT = "./file_data"
+    save_dir = os.path.join(UPLOAD_ROOT, str(category_id))
+    os.makedirs(save_dir, exist_ok=True)
+ 
+    unique_name = f"{uuid.uuid4().hex}_{original_filename}"
+    abs_path = os.path.join(save_dir, unique_name)
+ 
+    try:
+        with open(abs_path, "wb") as f:
+            f.write(file_bytes)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"写入转移文件失败: {e}")
+        
+    # 5. 上传倒 RagFlow 并插入公共知识库数据库表
+    rel_path = f"{category_id}/{unique_name}"
+    description = ""
+    tags_json = json.dumps([], ensure_ascii=False)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    try:
+        from services.ragflow_service import upload_to_ragflow, start_parsing_document
+        ragflow_result = upload_to_ragflow(abs_path)
+        
+        document_id = None
+        if ragflow_result and ragflow_result.get("code") == 0 and ragflow_result.get("data"):
+            document_id = ragflow_result["data"][0]["id"]
+            start_parsing_document([document_id])
+            
+        sqlite_execute(
+            """
+            INSERT INTO publicDatabase_file
+                (category_id, title, file_path, file_type, file_size, description, tags, created_at, updated_at, content_hash, ragflow_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (category_id, title_clean, rel_path, file_type, file_size, description, tags_json, now, now, content_hash, document_id),
+        )
+        new_id_res = sqlite_execute("SELECT last_insert_rowid() as id")
+        new_id = new_id_res[0]["id"] if new_id_res else 0
+        
+    except Exception as e:
+        if os.path.exists(abs_path):
+            os.remove(abs_path)
+        raise HTTPException(status_code=500, detail=f"RAGFlow 解析或数据库记录失败: {e}")
+        
+    return {
+        "code": 200, 
+        "msg": 'success',
+        "data": {
+            "id": new_id,
+            "category_id": category_id,
+            "title": title_clean,
+            "filename": original_filename
+        }
+    }
 
 
 #=======公共知识库======= 
@@ -146,6 +265,7 @@ async def get_file_by_id(
 @router.post("/upload_file", summary="上传单个文件")
 async def upload_file(
     request: Request,
+    user_id: int = Body(..., embed=True, description="操作用户id"),
     category_id: int = Body(..., embed=True, description="目标目录 id，必须存在于 publicDatabase_categories"),
     filename: str = Body(..., embed=True, description="原始文件名，含扩展名，如 report.pdf"),
     base64_data: str = Body(..., embed=True, description="文件内容 Base64 字符串，不含 data:xxx;base64, 前缀"),
@@ -153,6 +273,16 @@ async def upload_file(
     description: Optional[str] = Body(None, embed=True, description="文档描述"),
     tags: Optional[list[str]] = Body(None, embed=True, description="标签列表，如 ['钻井','深井']"),
 ):
+    # 0. 权限校验，判断用户是否拥有上传权限
+    perm_check_sql = """
+        SELECT permission
+        FROM user_permissions
+        WHERE user_id = ? AND permission = 'public_db_document:upload'
+    """
+    perm_result = sqlite_execute(perm_check_sql, (user_id,))
+    if not perm_result:
+        raise HTTPException(status_code=403, detail="您没有权限上传公共知识库文件")
+
     title_clean = (title or "").strip()
     if not title_clean:
         raise HTTPException(status_code=400, detail="文档标题不能为空")
@@ -200,18 +330,38 @@ async def upload_file(
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
  
     try:
-        # 尝试插入文件记录
-        sqlite_execute(
-            """
-            INSERT INTO publicDatabase_file
-                (category_id, title, file_path, file_type, file_size, description, tags, created_at, updated_at, content_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (category_id, title_clean, rel_path, file_type, file_size, description, tags_json, now, now, content_hash),
-        )
-        # 获取新插入的 ID
-        new_id_res = sqlite_execute("SELECT last_insert_rowid() as id")
-        new_id = new_id_res[0]["id"] if new_id_res else 0
+
+
+        # ── 调用 RAGFlow 上传 ───────────────────────────────────────
+        try:
+            from services.ragflow_service import upload_to_ragflow, start_parsing_document
+            ragflow_result = upload_to_ragflow(abs_path)
+            print(f"RAGFlow 上传结果: {ragflow_result}")
+            
+            # 解析刚才上传的文件的 ID，并立刻触发解析嵌入
+            if ragflow_result and ragflow_result.get("code") == 0 and ragflow_result.get("data"):
+                document_id = ragflow_result["data"][0]["id"]
+                parse_result = start_parsing_document([document_id])
+                print(f"RAGFlow 触发解析结果: {parse_result}")
+
+                # 尝试插入文件记录
+                sqlite_execute(
+                    """
+                    INSERT INTO publicDatabase_file
+                        (category_id, title, file_path, file_type, file_size, description, tags, created_at, updated_at, content_hash,ragflow_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (category_id, title_clean, rel_path, file_type, file_size, description, tags_json, now, now, content_hash,document_id),
+                )
+                # 获取新插入的 ID
+                new_id_res = sqlite_execute("SELECT last_insert_rowid() as id")
+                new_id = new_id_res[0]["id"] if new_id_res else 0
+                
+        except Exception as e:
+            # RAGFlow 失败不阻断写入，但记录错误
+            print(f"RAGFlow 调用失败（不阻断写入）: {e}")
+
+
 
     except Exception as e:
         # 数据库写入失败时回滚已落盘的文件
@@ -282,3 +432,51 @@ async def get_public_file_by_id(request: Request, file_id: int = Body(..., embed
 async def search_keyword(request: Request, keyword: str = Body(..., embed=True, description="关键字")):
     res = sqlite_execute("SELECT * FROM `publicDatabase_file` WHERE title LIKE ?", (f"%{keyword}%"))
     return {"code": 200, "msg": 'success', "data": res}
+
+#删除公共知识库一条消息
+@router.post("/delete_public_file_by_id")
+async def delete_public_file_by_id(
+    request: Request, 
+    file_id: int = Body(..., embed=True, description="文件id"),
+    user_id: int = Body(..., embed=True, description="操作用户id")
+):
+    # 0. 权限校验，判断用户是否拥有删除权限
+    perm_check_sql = """
+        SELECT permission
+        FROM user_permissions
+        WHERE user_id = ? AND permission = 'public_db_document:delete'
+    """
+    perm_result = sqlite_execute(perm_check_sql, (user_id,))
+    if not perm_result:
+        return {"code": 403, "msg": "您没有权限删除公共知识库文件", "data": None}
+
+    # 1. 查询文件记录以获取文件存储的相对路径供删除
+    file_info = sqlite_execute("SELECT * FROM `publicDatabase_file` WHERE id=?", (file_id,))
+    
+    if file_info:
+        file_path = f"./file_data/{file_info[0]['file_path']}"
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"公共知识库文件已从本地服务器删除: {file_path}")
+        except Exception as e:
+            print(f"删除物理文件阶段发生错误: {e}")
+            
+    # 2. 从数据库删除关联记录
+    res = sqlite_execute("DELETE FROM `publicDatabase_file` WHERE id=?", (file_id,))
+
+    # 3. 从ragflow中删除文件
+    try:
+        file_id = file_info[0]['ragflow_id']
+        from services.ragflow_service import delete_file_from_ragflow
+        print(delete_file_from_ragflow(file_id))
+    except Exception as e:
+        print(f"从ragflow中删除文件失败: {e}")
+    
+    return {"code": 200, "msg": 'success', "data": res}
+
+
+
+
+
+
