@@ -1,17 +1,12 @@
 <template>
   <el-dialog v-model="dialogVisible" title="选择上传的公共知识库目标分类" width="450px" @open="handleOpen" append-to-body>
     <div v-loading="loadingStructure" style="height: 350px; overflow-y: auto;">
-      <el-tree
-        ref="treeRef"
-        :data="categoryTree"
-        :props="defaultProps"
-        highlight-current
-        node-key="id"
-        @node-click="handleTransferNodeClick"
-      >
+      <el-tree ref="treeRef" :data="categoryTree" :props="defaultProps" highlight-current node-key="id"
+        @node-click="handleTransferNodeClick">
         <template #default="{ node, data }">
           <span class="custom-tree-node">
-            <span class="node-numbering" v-if="data.numbering" style="margin-right: 8px; font-family: Courier New; color: #909399;">{{ data.numbering }}</span>
+            <span class="node-numbering" v-if="data.numbering"
+              style="margin-right: 8px; font-family: Courier New; color: #909399;">{{ data.numbering }}</span>
             <el-icon class="node-icon" style="margin-right: 8px; color: #409eff;">
               <Folder v-if="!data.is_file" />
               <Document v-else />
@@ -93,7 +88,7 @@ const handleOpen = async () => {
   selectedTransferNode.value = null
   loadingStructure.value = true
   try {
-    const response = await api.post('/get_knowledge/get_structure')
+    const response = await api.post('/public_knowledgebase/get_structure')
     if (response.data && response.data.code === 200) {
       categoryTree.value = buildTree(response.data.data || [])
     } else {

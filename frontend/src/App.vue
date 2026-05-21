@@ -15,9 +15,7 @@
               <component :is="isCollapse ? 'Expand' : 'Fold'" />
             </el-icon>
             <h1 class="system-title">
-              <el-icon class="title-icon">
-                <Document />
-              </el-icon>
+
               科研情报系统
             </h1>
           </div>
@@ -216,8 +214,8 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import CountSetting from '@/components/zhanghu/count_setting.vue'
-import AboutSystem from '@/components/zhanghu/about_system.vue'
+import CountSetting from '@/components/系统/账户设置.vue'
+import AboutSystem from '@/components/系统/关于系统.vue'
 
 // 侧边栏折叠状态
 const isCollapse = ref(false)
@@ -304,20 +302,26 @@ const handleClose = (key: string, keyPath: string[]) => {
 </script>
 
 <style scoped>
-/* 登录容器样式，让登录页面占满整个屏幕 */
+/* 登录容器样式匹配 */
 .login-container {
   width: 100vw;
   height: 100vh;
   margin: 0;
   padding: 0;
-  background: #f0f2f5;
+  background: #0b0f19;
+  /* 与登录页面的底层夜色匹配，防止闪屏 */
 }
 
+/* 整个应用底层背景：高级液态光效 (Light mode glass) */
 .research-layout {
   height: 100vh;
   width: 100vw;
-  background: #eef0f3;
-  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  background-color: #f2f5f9;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(0, 195, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(147, 51, 234, 0.06) 0%, transparent 60%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
 }
 
 .main-container {
@@ -326,17 +330,20 @@ const handleClose = (key: string, keyPath: string[]) => {
   border-radius: 0;
   margin: 0;
   overflow: hidden;
-  background: #f4f6f8;
+  background: transparent;
 }
 
-/* 顶部导航栏样式 — 深海军蓝，科研机构风格 */
+/* 顶部导航栏：悬浮玻璃 */
 .header {
-  background: #1a2b4a;
-  color: white;
-  padding: 0 28px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  height: 56px !important;
-  border-bottom: 2px solid #0f5ea8;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  color: #1a2b4a;
+  padding: 0 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+  height: 52px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  z-index: 10;
 }
 
 .header-content {
@@ -353,30 +360,31 @@ const handleClose = (key: string, keyPath: string[]) => {
 }
 
 .collapse-btn {
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  color: #e8edf5;
-  transition: color 0.3s;
+  color: #4a5568;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .collapse-btn:hover {
-  color: #3b82f6;
+  color: #007aff;
+  transform: scale(1.05);
 }
 
 .system-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #e8edf5;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a2b4a;
   letter-spacing: 0.5px;
 }
 
 .title-icon {
-  font-size: 20px;
-  color: #5ba4e0;
+  font-size: 18px;
+  color: #007aff;
 }
 
 .header-actions {
@@ -387,37 +395,37 @@ const handleClose = (key: string, keyPath: string[]) => {
 
 /* 当前用户ID显示样式 */
 .id-value {
-  font-weight: 500;
-  color: #a8c4e0;
+  font-weight: 600;
+  color: #64748b;
   margin-right: 4px;
   font-size: 13px;
 }
 
 .user-avatar-circle {
-  width: 32px;
-  height: 32px;
-  background-color: #3b82f6;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #007aff 0%, #00d4ff 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   user-select: none;
   flex-shrink: 0;
 }
 
 .user-avatar-circle.clickable {
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .user-avatar-circle.clickable:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
 }
 
 .dialog-footer {
@@ -427,16 +435,20 @@ const handleClose = (key: string, keyPath: string[]) => {
 
 /* 主体容器样式 */
 .body-container {
-  height: calc(100% - 56px);
+  height: calc(100% - 52px);
 }
 
-/* 侧边栏样式 — 白底、左蓝边框点缀 */
+/* 侧边栏：液态毛玻璃 */
 .sidebar {
-  width: 180px !important;
-  background: #ffffff;
-  border-right: 1px solid #d6dce6;
+  width: 200px !important;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-right: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 2px 0 24px rgba(0, 0, 0, 0.02);
   overflow-y: auto;
-  transition: width 0.3s;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 5;
 }
 
 .sidebar.is-collapsed {
@@ -444,8 +456,7 @@ const handleClose = (key: string, keyPath: string[]) => {
 }
 
 .sidebar-content {
-  padding: 16px 0;
-  /* 折叠收缩时去掉左右边距以保证对齐 */
+  padding: 8px 0;
 }
 
 .sidebar-menu {
@@ -460,42 +471,27 @@ const handleClose = (key: string, keyPath: string[]) => {
 .menu-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 600;
+  gap: 8px;
+  font-weight: 700;
   color: #1a2b4a;
   font-size: 13px;
 }
 
-.menu-icon {
-  font-size: 16px;
-  color: #2664a8;
-}
-
 .submenu-group {
   padding-left: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
+  margin-bottom: 4px;
 }
 
 .group-label {
   font-size: 11px;
   color: #8a9ab5;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   margin-bottom: 4px;
   padding-left: 12px;
-  margin-top: 8px;
-  font-weight: 600;
-}
-
-.menu-item {
-  margin: 2px 0;
-  border-radius: 3px;
-  transition: background 0.15s ease;
-}
-
-.menu-item:hover {
-  background-color: #eaf1fb;
-  transform: none;
+  margin-top: 6px;
+  font-weight: 700;
 }
 
 .menu-link {
@@ -504,30 +500,46 @@ const handleClose = (key: string, keyPath: string[]) => {
   display: flex;
   align-items: center;
   width: 100%;
+  height: 100%;
 }
 
 .eye-icon {
-  font-size: 15px;
+  font-size: 14px;
 }
 
-/* 主内容区域样式 */
+/* 主内容区域：稍微透明给内部卡片留出空间，去除外部滚动条 */
 .main-content {
   width: 100%;
   height: 100%;
-  background: #f4f6f8;
-  padding: 0px;
+  box-sizing: border-box;
+  background: transparent;
+  padding: 8px 12px;
+  /* 减小间距，使得里边卡片更长更宽 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 防止全局出现滚动条 */
 }
 
 .content-wrapper {
+  flex: 1;
+  /* 撑满剩余全部空间，避免定高溢出 */
   width: 100%;
-  height: 100%;
-  background: #f4f6f8;
-  border-radius: 0;
-  box-shadow: none;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border-radius: 20px;
+  /* 稍微减弱圆角提升空间利用率 */
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
   padding: 0px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Element Plus 组件样式覆盖 */
+/* Element Plus 玻璃拟物化菜单样式覆盖 */
 :deep(.el-menu) {
   border-right: none;
 }
@@ -538,41 +550,56 @@ const handleClose = (key: string, keyPath: string[]) => {
 }
 
 :deep(.el-sub-menu__title) {
-  height: 44px;
-  line-height: 44px;
-  padding-left: 12px !important;
-  border-radius: 3px;
-  margin: 2px 0;
-  transition: background 0.15s ease;
+  height: 38px;
+  line-height: 38px;
+  padding-left: 14px !important;
+  border-radius: 8px;
+  margin: 2px 8px;
+  transition: all 0.3s ease;
   color: #1a2b4a;
   font-size: 13px;
 }
 
 :deep(.el-sub-menu__title:hover) {
-  background-color: #eaf1fb;
+  background-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 :deep(.el-menu-item) {
-  height: 38px;
-  line-height: 38px;
-  padding-left: 28px !important;
-  border-radius: 3px;
-  margin: 1px 0;
+  height: 34px;
+  line-height: 34px;
+  padding-left: 30px !important;
+  border-radius: 8px;
+  margin: 2px 8px;
   font-size: 13px;
-  color: #3a4a62;
+  font-weight: 500;
+  color: #4a5568;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:deep(.el-menu-item:hover) {
+  background-color: rgba(255, 255, 255, 0.8);
+  transform: translateX(3px);
 }
 
 :deep(.el-menu-item.is-active) {
-  background-color: #ddeeff;
-  color: #1a5caa;
-  font-weight: 600;
-  border-left: 3px solid #1a5caa;
+  background-color: rgba(0, 122, 255, 0.08);
+  color: #007aff;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.15);
+  border-left: none;
+  /* 移除旧的粗左边框设计 */
 }
 
 :deep(.el-menu-item .el-icon) {
   margin-right: 8px;
   font-size: 15px;
-  color: #2664a8;
+  color: #64748b;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-menu-item.is-active .el-icon) {
+  color: #007aff;
 }
 
 /* 响应式设计 */
@@ -587,11 +614,19 @@ const handleClose = (key: string, keyPath: string[]) => {
   }
 
   .sidebar {
-    width: 180px !important;
+    width: 200px !important;
   }
 
   .system-title {
-    font-size: 16px;
+    font-size: 18px;
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .content-wrapper {
+    border-radius: 20px;
   }
 }
 </style>

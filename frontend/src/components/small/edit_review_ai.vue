@@ -260,7 +260,7 @@ const uniqueTypes = computed(() => {
 const fetchPromptList = async () => {
   try {
     const userId = getUserIdFromCookie();
-    const response = await request.post('/get_setting/get_all_prompt', {
+    const response = await request.post('/system/get_all_prompt', {
       user_id: userId
     });
 
@@ -296,7 +296,7 @@ const fetchKnowledgeList = async () => {
   try {
     loading.value = true;
     const userId = getUserIdFromCookie();
-    const response = await request.post('/get_knowledge/get_all_knowledge', {
+    const response = await request.post('/personal_knowledgebase/get_all_knowledge', {
       user_id: userId
     });
 
@@ -366,7 +366,7 @@ const handleSubmit = async () => {
     console.log('提交用户输入的需求:', inputDemand.value);
 
     // 调用AI生成摘要接口
-    const response = await request.post('/get_review/get_summary_by_ai', {
+    const response = await request.post('/report/get_summary_by_ai', {
       knowledge_ids: selectedKnowledgeIds.value,
       prompt_ids: selectedPromptIds.value,
       user_need: inputDemand.value,

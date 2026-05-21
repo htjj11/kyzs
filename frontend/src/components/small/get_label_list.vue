@@ -1,21 +1,11 @@
 <template>
   <div>
-    <el-dialog
-      v-model="dialogVisible"
-      title="选择标签"
-      width="30%"
-      @open="handleOpen"
-    >
+    <el-dialog v-model="dialogVisible" title="选择标签" width="30%" @open="handleOpen">
       <div class="label-select-wrapper">
         <el-form label-width="80px">
           <el-form-item label="选择标签">
             <el-select v-model="selectedLabelId" placeholder="请选择标签">
-              <el-option
-                v-for="label in labelList"
-                :key="label.id"
-                :label="label.label_name"
-                :value="label.id"
-              />
+              <el-option v-for="label in labelList" :key="label.id" :label="label.label_name" :value="label.id" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -75,12 +65,12 @@ const fetchLabelList = async () => {
     loading.value = true
     // 从authUtils获取用户信息
     const userId = getUserIdFromCookie() || 1 // 默认使用1作为备用
-    
+
     // 调用接口获取标签列表
-    const response = await request.post('/get_setting/get_label', {
+    const response = await request.post('/system/get_label', {
       user_id: userId
     })
-    
+
     if (response.data.code === 200) {
       labelList.value = response.data.data || []
       // 默认选择第一个标签（如果有）

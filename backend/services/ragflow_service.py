@@ -5,6 +5,7 @@ ragflow_api = "http://192.168.137.130/api/v1"
 ragflow_token = "ragflow-NO54LNjtXeQk8SPwNX4XhetqLVFmGZCGVXBQcLXo2EQ"
 dataset_id = "32d7e35833d411f1839a81bb6c992575"
 chat_id = "4a5debf433e711f1839a81bb6c992575"
+
 # 在ragflow中将文件添加至知识库
 def upload_to_ragflow(abs_file_path: str) -> dict:
     """
@@ -33,6 +34,35 @@ def upload_to_ragflow(abs_file_path: str) -> dict:
     else:
         raise Exception(f"上传至 RAGFlow 失败: http status {response.status_code}, \n body: {response.text}")
 
+# 将文件内容传入指定id的rag知识库
+def upload_to_ragflow_by_id(
+    file_path: str,
+    rag_dataset_id: str,
+    upload_filename: str | None = None,
+) -> dict:
+    """
+    将文件内容传入指定id的rag知识库
+    upload_filename: 上传到 RAGFlow 时显示的文件名，默认取本地路径 basename
+    """
+    url = f"{ragflow_api}/datasets/{rag_dataset_id}/documents"
+    headers = {
+        "Authorization": f"Bearer {ragflow_token}"
+    }
+    name = upload_filename or os.path.basename(file_path)
+    with open(file_path, "rb") as f:
+        files = {
+            "file": (name, f)
+        }
+        response = requests.post(url, headers=headers, files=files)
+    if response.status_code == 200:
+        return response.json()['data'][0]['id']
+    else:
+        raise Exception(f"上传至 RAGFlow 失败: http status {response.status_code}, \n body: {response.text}")
+
+ 
+
+
+
 #触发RAGFlow解析
 def start_parsing_document(document_ids: list[str]) -> dict:
     """
@@ -53,6 +83,27 @@ def start_parsing_document(document_ids: list[str]) -> dict:
         return response.json()
     else:
         raise Exception(f"触发 RAGFlow 文件解析失败: http status {response.status_code}, \n body: {response.text}")
+
+
+#触发指定知识库的指定文档解析
+def start_parsing_document_by_id(rag_dataset_id: str, document_ids: list[str]) -> dict:
+    """
+    触发指定知识库的指定文档解析        
+    """
+    url = f"{ragflow_api}/datasets/{rag_dataset_id}/chunks"
+    headers = {
+        "Authorization": f"Bearer {ragflow_token}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "document_ids": document_ids
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"触发 RAGFlow 文件解析失败: http status {response.status_code}, \n body: {response.text}")
+
 
 #获取知识库列表
 def get_datasets(
@@ -113,13 +164,37 @@ def delete_file_from_ragflow(file_id: str) -> dict:
         raise Exception(f"从 RAGFlow 中删除文件失败: http status {response.status_code}, \n body: {response.text}")
 
 
-#调用搜索接口，获取ai总结和知识库参考
+#建立一个新的知识库，获取其id
+def create_new_dataset(dataset_name: str) -> str:
+    """
+    创建一个新的知识库
+    :param dataset_name: 知识库名称
+    :return: 创建结果的 id
+    """
+    url = f"{ragflow_api}/datasets"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {ragflow_token}"
+    }
+    data = {
+        "name": dataset_name,
+        "embedding_model": "BAAI/bge-large-zh-v1.5@SILICONFLOW",
+        "chunk_method": "naive",
+        "parser_config": {
+            "chunk_token_num": 512,
+            "task_page_size": 24
+        }
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()['data']['id']
+    else:
+        raise Exception(f"创建 RAGFlow 数据集失败: http status {response.status_code}, \n body: {response.text}")
+
 
 
 
 if __name__ == "__main__":
-    # print(get_datasets())
-    # upload_to_ragflow("test.txt", "test_dataset")
-    # print(delete_file_from_ragflow("71d8e5e633e511f1839a81bb6c992575"))
-    for line in chat_with_ragflow("连油数据集成展示装置实施方案？"):
-        print(line)
+    # print(get_datasets()) # 查
+    # print(create_new_dataset("test_dataset"))
+    print(upload_to_ragflow_by_id("test.txt", "32d7e35833d411f1839a81bb6c992575"))

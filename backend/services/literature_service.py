@@ -6,7 +6,7 @@ import base64
 import time
 import xml.etree.ElementTree as ET
 from core.sqlLiteExec import sqlite_execute
-from services.third_party_source.aichat_api import get_xunfei_api, siliconflow_deepseek_answer
+
 #添加文献到知识库
 def add_article_to_knowledge(article_data: dict, label_id: int, user_id: int):
     title = str(article_data.get('title_zh', article_data['title'])).replace("\n", "")
@@ -75,10 +75,11 @@ def add_mycontent_file_to_knowledge(file_base64_string: str, file_extension: str
     if existing:
         return {"code": 400, "msg": "数据库当前用户中已存在相同文件名，不执行插入操作", "data": None}
 
-    os.makedirs("file_data", exist_ok=True)
+    os.makedirs(os.path.join("file_data", "personal_db"), exist_ok=True)
     file_ext = str(file_extension).replace(".", "")
     new_filename = f"{int(time.time() * 1000)}.{file_ext}"
-    file_path = os.path.join("file_data", new_filename)
+    rel_filename = f"personal_db/{new_filename}"
+    file_path = os.path.join("file_data", rel_filename)
 
     max_bytes = 200 * 1024 * 1024  # 与前端「资料上传」单文件上限一致
     try:
@@ -141,7 +142,7 @@ def add_mycontent_file_to_knowledge(file_base64_string: str, file_extension: str
     content_string = content_string.replace("\n", "")
     
     mark_info_dict = {
-        "filename": new_filename,
+        "filename": rel_filename,
         "original_filename": f"{title}.{file_ext}"
     }
     mark_info_str = json.dumps(mark_info_dict, ensure_ascii=False)
@@ -152,4 +153,3 @@ def add_mycontent_file_to_knowledge(file_base64_string: str, file_extension: str
     )
     return {'code': 200, 'msg': 'success', 'data': None}
 
-#

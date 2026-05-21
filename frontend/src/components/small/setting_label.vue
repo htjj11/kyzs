@@ -12,25 +12,14 @@
 
     <!-- 搜索和筛选 -->
     <div class="search-filter-container">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索标签名称"
-        clearable
-        style="width: 200px; margin-right: 12px;"
-        @clear="getAllLabels"
-        @keyup.enter="getAllLabels"
-      />
+      <el-input v-model="searchKeyword" placeholder="搜索标签名称" clearable style="width: 200px; margin-right: 12px;"
+        @clear="getAllLabels" @keyup.enter="getAllLabels" />
       <el-button type="primary" @click="getAllLabels">搜索</el-button>
     </div>
 
     <!-- 标签列表 -->
     <div class="label-list-container">
-      <el-table
-        v-loading="loading"
-        :data="labelList"
-        style="width: 100%"
-        border
-      >
+      <el-table v-loading="loading" :data="labelList" style="width: 100%" border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="label_name" label="标签名称" width="180" />
         <el-table-column label="操作" width="180" fixed="right">
@@ -43,25 +32,14 @@
 
       <!-- 分页 -->
       <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper" :total="total" @size-change="handleSizeChange"
+          @current-change="handleCurrentChange" />
       </div>
     </div>
 
     <!-- 添加/编辑标签对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="400px"
-      @close="resetForm"
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="400px" @close="resetForm">
       <el-form ref="labelFormRef" :model="formData" :rules="formRules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入标签名称" />
@@ -112,7 +90,7 @@ const getAllLabels = async () => {
   try {
     loading.value = true;
 
-    const response = await axios.post('/get_setting/get_label', {});
+    const response = await axios.post('/system/get_label', {});
     if (response && response.data && response.data.code === 200) {
       // 先保存完整的原始数据
       let allLabels = response.data.data || [];
@@ -120,14 +98,14 @@ const getAllLabels = async () => {
       // 在本地进行筛选
       if (searchKeyword.value) {
         const keyword = searchKeyword.value.toLowerCase();
-        allLabels = allLabels.filter(label => 
+        allLabels = allLabels.filter(label =>
           label.label_name.toLowerCase().includes(keyword)
         );
       }
-      
+
       // 计算总数
       total.value = allLabels.length;
-      
+
       // 本地分页处理
       const startIndex = (currentPage.value - 1) * pageSize.value;
       const endIndex = startIndex + pageSize.value;
@@ -175,10 +153,10 @@ const resetForm = () => {
 // 提交表单
 const submitForm = async () => {
   if (!labelFormRef.value) return;
-  
+
   try {
     await labelFormRef.value.validate();
-    
+
     let response;
     if (formData.id) {
       // 编辑操作
@@ -189,11 +167,11 @@ const submitForm = async () => {
       });
     } else {
       // 添加操作
-      response = await axios.post('/get_setting/add_label', {
+      response = await axios.post('/system/add_label', {
         label_name: formData.name
       });
     }
-    
+
     if (response && response.data && response.data.code === 200) {
       ElMessage.success(formData.id ? '编辑成功' : '添加成功');
       dialogVisible.value = false;
@@ -219,11 +197,11 @@ const handleDelete = async (id) => {
         type: 'warning'
       }
     );
-    
-    const response = await axios.post('/get_setting/delete_label', {    
+
+    const response = await axios.post('/system/delete_label', {
       id: Number(id)
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       ElMessage.success('删除成功');
       getAllLabels(); // 重新获取列表

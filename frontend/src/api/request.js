@@ -5,7 +5,9 @@ import {
     setUserIdCookie,
     getUserNameFromCookie,
     setUserNameCookie,
-    setExpireTimeCookie
+    setExpireTimeCookie,
+    getPermissionCookie,
+    setPermissionCookie
 } from "@/utils/authUtils";
 
 // 验证授权状态的函数
@@ -37,6 +39,11 @@ api.interceptors.request.use(
             const userName = getUserNameFromCookie();
             if (userName) {
                 setUserNameCookie(userName, 30);
+            }
+
+            const permission = getPermissionCookie();
+            if (permission) {
+                setPermissionCookie(permission, 30);
             }
         }
 

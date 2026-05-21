@@ -7,35 +7,19 @@
 
     <!-- 搜索和筛选 -->
     <div class="search-filter-container">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索提示词名称"
-        clearable
-        style="width: 200px; margin-right: 12px;"
-        @clear="getAllPrompts"
-        @keyup.enter="getAllPrompts"
-      />
-      <el-select
-          v-model="filterType"
-          placeholder="筛选类型"
-          clearable
-          style="width: 120px; margin-right: 12px;"
-          @change="getAllPrompts"
-        >
-          <el-option label="全部" value="" />
-          <el-option v-for="type in promptTypes" :key="type.id" :label="type.type_name" :value="type.id" />
-        </el-select>
+      <el-input v-model="searchKeyword" placeholder="搜索提示词名称" clearable style="width: 200px; margin-right: 12px;"
+        @clear="getAllPrompts" @keyup.enter="getAllPrompts" />
+      <el-select v-model="filterType" placeholder="筛选类型" clearable style="width: 120px; margin-right: 12px;"
+        @change="getAllPrompts">
+        <el-option label="全部" value="" />
+        <el-option v-for="type in promptTypes" :key="type.id" :label="type.type_name" :value="type.id" />
+      </el-select>
       <el-button type="primary" @click="getAllPrompts">搜索</el-button>
     </div>
 
     <!-- 提示词列表 -->
     <div class="prompt-list-container">
-      <el-table
-        v-loading="loading"
-        :data="promptList"
-        style="width: 100%"
-        border
-      >
+      <el-table v-loading="loading" :data="promptList" style="width: 100%" border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="名称" width="180" />
         <el-table-column prop="text" label="提示词内容" min-width="300" />
@@ -54,36 +38,20 @@
 
       <!-- 分页 -->
       <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper" :total="total" @size-change="handleSizeChange"
+          @current-change="handleCurrentChange" />
       </div>
     </div>
 
     <!-- 添加/编辑提示词对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="500px"
-      @close="resetForm"
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" @close="resetForm">
       <el-form ref="promptFormRef" :model="formData" :rules="formRules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入提示词名称" />
         </el-form-item>
         <el-form-item label="内容" prop="text">
-          <el-input
-            v-model="formData.text"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入提示词内容"
-          />
+          <el-input v-model="formData.text" type="textarea" :rows="4" placeholder="请输入提示词内容" />
         </el-form-item>
         <el-form-item label="类型" prop="type">
           <el-select v-model="formData.type" placeholder="请选择提示词类型">
@@ -154,10 +122,10 @@ const getUserId = () => {
 const getAllPromptTypes = async () => {
   try {
     const userId = getUserId();
-    const response = await request.post('/get_setting/get_all_prompt_type', {
+    const response = await request.post('/system/get_all_prompt_type', {
       user_id: userId
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       promptTypes.value = response.data.data || [];
       // 构建类型映射
@@ -184,41 +152,41 @@ const getAllPromptTypes = async () => {
 const getAllPrompts = async () => {
   try {
     loading.value = true;
-    
+
     // 并行调用两个接口
     const userId = getUserId();
     const [promptResponse, typesSuccess] = await Promise.all([
-      request.post('/get_setting/get_all_prompt', { user_id: userId }),
+      request.post('/system/get_all_prompt', { user_id: userId }),
       getAllPromptTypes()
     ]);
-    
+
     if (promptResponse && promptResponse.data && promptResponse.data.code === 200) {
       // 先保存完整的原始数据
       const allPrompts = promptResponse.data.data || [];
 
-      
+
       // 在本地进行筛选
       let filteredPrompts = [...allPrompts];
-      
+
       // 根据关键词筛选
       if (searchKeyword.value) {
         const keyword = searchKeyword.value.toLowerCase();
-        filteredPrompts = filteredPrompts.filter(prompt => 
-          prompt.name.toLowerCase().includes(keyword) || 
+        filteredPrompts = filteredPrompts.filter(prompt =>
+          prompt.name.toLowerCase().includes(keyword) ||
           prompt.text.toLowerCase().includes(keyword)
         );
       }
-      
+
       // 根据类型筛选
       if (filterType.value) {
-        filteredPrompts = filteredPrompts.filter(prompt => 
+        filteredPrompts = filteredPrompts.filter(prompt =>
           prompt.type === Number(filterType.value)
         );
       }
-      
+
       // 计算总数
       total.value = filteredPrompts.length;
-      
+
       // 本地分页处理
       const startIndex = (currentPage.value - 1) * pageSize.value;
       const endIndex = startIndex + pageSize.value;
@@ -270,20 +238,20 @@ const resetForm = () => {
 // 提交表单
 const submitForm = async () => {
   if (!promptFormRef.value) return;
-  
+
   try {
     await promptFormRef.value.validate();
-    
+
     const userId = getUserId();
     if (!userId) {
       ElMessage.error('请先登录');
       return;
     }
-    
+
     let response;
     if (formData.id) {
       // 编辑操作 - 根据接口定义，参数需要单独提交
-      response = await request.post('/get_setting/update_prompt', {
+      response = await request.post('/system/update_prompt', {
         name: formData.name,
         text: formData.text,
         type: Number(formData.type), // 确保类型ID是数字
@@ -291,14 +259,14 @@ const submitForm = async () => {
       });
     } else {
       // 添加操作 - 根据接口定义，参数需要单独提交
-      response = await request.post('/get_setting/add_prompt', {
+      response = await request.post('/system/add_prompt', {
         user_id: userId,
         name: formData.name,
         text: formData.text,
         type: Number(formData.type) // 确保类型ID是数字
       });
     }
-    
+
     if (response && response.data && response.data.code === 200) {
       ElMessage.success(formData.id ? '编辑成功' : '添加成功');
       dialogVisible.value = false;
@@ -324,12 +292,12 @@ const handleDelete = async (id) => {
         type: 'warning'
       }
     );
-    
+
     // 根据接口定义，确保id是数字类型
-    const response = await request.post('/get_setting/delete_prompt', {
+    const response = await request.post('/system/delete_prompt', {
       id: Number(id)
     });
-    
+
     if (response && response.data && response.data.code === 200) {
       ElMessage.success('删除成功');
       getAllPrompts(); // 重新获取列表

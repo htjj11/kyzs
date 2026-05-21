@@ -3,13 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from concurrent.futures import ThreadPoolExecutor
 
 from routers import (
-    literature,
-    knowledge_add,
-    settings,
-    knowledge,
-    review,
-    translate,
-    auth,
+    数据检索,
+    个人知识库,
+    公共知识库,
+    报告,
+    翻译,
+    系统配置,
 )
 from services.report_service import delete_summary
 
@@ -23,13 +22,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(literature.router)
-app.include_router(knowledge_add.router)
-app.include_router(settings.router)
-app.include_router(knowledge.router)
-app.include_router(review.router)
-app.include_router(translate.router)
-app.include_router(auth.router)
+app.include_router(数据检索.router)
+app.include_router(个人知识库.router)
+app.include_router(公共知识库.router)
+app.include_router(报告.router)
+app.include_router(翻译.router)
+app.include_router(系统配置.router)
  
 
 executor = ThreadPoolExecutor()

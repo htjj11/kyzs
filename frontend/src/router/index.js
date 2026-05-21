@@ -1,25 +1,8 @@
-import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import { getUserIdFromCookie } from '@/utils/authUtils'
 
 // 导入登录组件
 import login from "@/login.vue"
-
-// 若 "@/components/wxjs.vue" 解析失败，尝试使用相对路径导入
-// 假设该文件相对于当前文件的路径是 "../components/wxjs.vue"，请根据实际目录结构调整
-import literatureSearch from "@/components/baogao/literature_search.vue";
-import patentSearch from "@/components/baogao/patent_search.vue";
-import webinfoSearch from "@/components/baogao/webinfo_search.vue";
-import fileUpload from "@/components/baogao/file_upload.vue";
-import zskck from "@/components/baogao/5zskck.vue";
-import report_view from "@/components/baogao/report_view.vue";
-import new_editor from "@/components/baogao/new_editor.vue";
-
-import wbfy from "@/components/fanyi/wbfy.vue";
-import wdfy from "@/components/fanyi/wdfy.vue";
-import ckgl from "@/components/fanyi/ckgl.vue";
-import public_db from "@/components/public_db/public_db.vue";
-
-
 
 // 检查用户是否已登录的函数
 const isUserLoggedIn = () => {
@@ -27,7 +10,8 @@ const isUserLoggedIn = () => {
   return getUserIdFromCookie() !== null;
 };
 
-//这里是路由和组件的绑定关系
+// 这里是路由和组件的绑定关系
+// 为了提高性能，所有页面组件均使用路由懒加载（动态导入）
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -41,67 +25,124 @@ const router = createRouter({
       path: '/',
       redirect: '/literatureSearch'
     },
+
+    // ----------------- 报告智能体 -----------------
     {
-      //文献搜索
+      // 文献检索
       path: '/literatureSearch',
       name: 'literatureSearch',
-      component: literatureSearch,
+      component: () => import("@/components/报告智能体/文献检索.vue"),
       meta: { requiresAuth: true }
     },
     {
-      //专利检索
+      // 专利检索
       path: '/patentSearch',
       name: 'patentSearch',
-      component: patentSearch,
+      component: () => import("@/components/报告智能体/专利检索.vue"),
       meta: { requiresAuth: true }
     },
     {
-      //资料上传
-      path: '/fileUpload',
-      name: 'fileUpload',
-      component: fileUpload,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/report_view',
-      name: 'report_view',
-      component: report_view,
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/zskck',
-      name: 'zskck',
-      component: zskck,
-      meta: { requiresAuth: true }
-    },
-    {
+      // 网络信息检索
       path: '/webinfoSearch',
       name: 'webinfoSearch',
-      component: webinfoSearch,
+      component: () => import("@/components/报告智能体/网络信息检索.vue"),
       meta: { requiresAuth: true }
     },
     {
+      // 个人知识库上传
+      path: '/fileUpload',
+      name: 'fileUpload',
+      component: () => import("@/components/报告智能体/个人知识库上传.vue"),
+      meta: { requiresAuth: true }
+    },
+    {
+      // 个人知识库
+      path: '/zskck',
+      name: 'zskck',
+      component: () => import("@/components/报告智能体/个人知识库.vue"),
+      meta: { requiresAuth: true }
+    },
+    {
+      // 报告管理
+      path: '/report_view',
+      name: 'report_view',
+      component: () => import("@/components/报告智能体/报告管理.vue"),
+      meta: { requiresAuth: true }
+    },
+    {
+      // new_editor
+      path: '/new_editor',
+      name: 'new_editor',
+      component: () => import("@/components/报告智能体/报告管理/报告编辑器.vue"),
+      meta: { requiresAuth: true }
+    },
+
+    // ----------------- 翻译智能体 -----------------
+    {
+      // 文本翻译
       path: '/wbfy',
       name: 'wbfy',
-      component: wbfy,
+      component: () => import("@/components/翻译智能体/文本翻译.vue"),
       meta: { requiresAuth: true }
     },
     {
+      // 文档翻译
       path: '/wdfy',
       name: 'wdfy',
-      component: wdfy,
+      component: () => import("@/components/翻译智能体/文档翻译.vue"),
       meta: { requiresAuth: true }
     },
     {
+      // 词库管理
       path: '/ckgl',
       name: 'ckgl',
-      component: ckgl,
+      component: () => import("@/components/翻译智能体/词库管理.vue"),
+      meta: { requiresAuth: true }
+    },
+
+    // ----------------- 公共知识库 -----------------
+    {
+      // 公共知识库主页
+      path: '/public_db',
+      name: 'public_db',
+      component: () => import("@/components/公共知识库/公共知识库主页.vue"),
       meta: { requiresAuth: true }
     },
     {
-      path: '/public_db',
-      name: 'public_db',
-      component: public_db,
+      // 公共知识库上传
+      path: '/public_db_upload',
+      name: 'public_db_upload',
+      component: () => import("@/components/公共知识库/公共知识库上传.vue"),
+      meta: { requiresAuth: true }
+    },
+    {
+      // 公共知识库对话
+      path: '/public_db_chat',
+      name: 'public_db_chat',
+      component: () => import("@/components/公共知识库/公共知识库对话.vue"),
+      meta: { requiresAuth: true }
+    },
+    {
+      // 公共知识库查看
+      path: '/public_db_view',
+      name: 'public_db_view',
+      component: () => import("@/components/公共知识库/公共知识库查看.vue"),
+      meta: { requiresAuth: true }
+    },
+
+    // ----------------- 系统 -----------------
+    {
+      // 关于系统
+      path: '/system_about',
+      name: 'system_about',
+      component: () => import("@/components/系统/关于系统.vue"),
+      meta: { requiresAuth: true }
+    },
+    {
+      // 账户设置
+      path: '/account_settings',
+      name: 'account_settings',
+      component: () => import("@/components/系统/账户设置.vue"),
       meta: { requiresAuth: true }
     },
 
@@ -109,13 +150,7 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       redirect: '/login'
-    },
-    {
-      path: '/new_editor',
-      name: 'new_editor',
-      component: new_editor,
-      meta: { requiresAuth: true }
-    },
+    }
   ]
 })
 

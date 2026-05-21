@@ -14,7 +14,7 @@ def translate_text_api(raw_text: str, translate_type: str, field_id: int):
         1. 从 translate_words 词典表中查找原文里出现的专业术语
         2. 将匹配到的术语对照组拼入提示词，辅助大模型保持行业术语一致性
         3. 通过 Function Tool 强制模型返回标准 JSON {origin_text, translate_text}
-        4. 解析失败时重试，直到成功
+        4. 解析失败时重试，直到成功 
 
     translate_type: 'en2zh' 英译中 / 'zh2en' 中译英
     field_id: 专业领域 id，用于过滤对应领域的词典
@@ -65,6 +65,7 @@ def translate_text_api(raw_text: str, translate_type: str, field_id: int):
         arguments = response.json()['choices'][0]['message']['tool_calls'][0]['function']['arguments']
         result = json.loads(arguments)
         print(f"Function Tool 翻译结果: {result}")
+               
         return result
     # ---------- 主流程 ----------
     print('用户请求翻译:', raw_text[:40], '...')
