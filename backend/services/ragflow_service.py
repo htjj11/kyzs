@@ -1,3 +1,4 @@
+import json
 import os
 import requests
 
@@ -164,6 +165,31 @@ def delete_file_from_ragflow(file_id: str) -> dict:
         raise Exception(f"从 RAGFlow 中删除文件失败: http status {response.status_code}, \n body: {response.text}")
 
 
+# 删除指定知识库中的指定文档
+def delete_file_from_ragflow_by_id(rag_dataset_id: str, file_id: str) -> dict:
+    """
+    从指定 RAGFlow 知识库中删除文档
+    :param rag_dataset_id: 知识库（dataset）ID
+    :param file_id: RAGFlow 中的 document ID（字符串格式）
+    """
+    url = f"{ragflow_api}/datasets/{rag_dataset_id}/documents"
+    headers = {
+        "Authorization": f"Bearer {ragflow_token}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "ids": [file_id]
+    }
+    response = requests.delete(url, headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(
+            f"从 RAGFlow 知识库 {rag_dataset_id} 删除文件失败: "
+            f"http status {response.status_code}, \n body: {response.text}"
+        )
+
+
 #建立一个新的知识库，获取其id
 def create_new_dataset(dataset_name: str) -> str:
     """
@@ -191,10 +217,93 @@ def create_new_dataset(dataset_name: str) -> str:
     else:
         raise Exception(f"创建 RAGFlow 数据集失败: http status {response.status_code}, \n body: {response.text}")
 
+#建立一个新的知识库对话，返回对话的chatid
+def create_chat_with_dataset(
+    dataset_id: str,
+    chat_name: str = "My Assistant"
+) -> dict:
+    """
+    基于已有知识库 ID，创建一个 Chat Assistant，返回 chat_id 和嵌入 URL。
 
+
+    :param api_key:     RAGFlow API Key，例如 "ragflow-xxxxxxxxxxxx"
+    :param dataset_id:  已知的知识库 ID
+    :param chat_name:   Chat Assistant 名称
+    :return: {"chat_id": ..., "embed_url": ..., "iframe": ...}
+    """
+    url = f"{ragflow_api}/chats"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {ragflow_token}",
+    }
+    payload = {
+        "name": chat_name,
+        "dataset_ids": [dataset_id],
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code != 200:
+        raise Exception(
+            f"创建 RAGFlow 对话失败: http status {response.status_code}, \n body: {response.text}"
+        )
+    result = response.json()
+    if result.get("code") != 0:
+        raise Exception(f"创建 RAGFlow 对话失败：{result.get('message', result)}")
+
+    chat_id = result["data"]["id"]
+    base_url = ragflow_api.split("/api/")[0]
+    auth_token = ragflow_token.replace("ragflow-", "", 1)
+    embed_url = f"{base_url}/chat/share?shared_id={chat_id}&from=chat&auth={auth_token}"
+    iframe_html = (
+        f'<iframe src="{embed_url}" width="100%" height="700px" frameborder="0"></iframe>'
+    )
+    return {
+        "chat_id": chat_id,
+        "embed_url": embed_url,
+        "iframe": iframe_html,
+    }
+
+
+# 从某个知识库检索（base_url、api_key 等使用模块顶部配置）
+def search_from_dataset(
+    question: str, 
+    rag_dataset_id: str | None = None,
+    top_k: int = 10,
+    similarity_threshold: float = 0.2,
+) -> dict:
+    """
+    直接对指定知识库做语义检索，返回匹配的 chunks。
+    :param question: 检索问题
+    :param rag_dataset_id: 知识库 ID，默认使用模块配置的 dataset_id
+    """
+    ds_id = rag_dataset_id or dataset_id
+    url = f"{ragflow_api}/retrieval"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {ragflow_token}",
+    }
+    payload = {
+        "question": question,
+        "dataset_ids": [ds_id],
+        "top_n": top_k,
+        "similarity_threshold": similarity_threshold,
+        "vector_similarity_weight": 0.3,
+        "highlight": True,
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code != 200:
+        raise Exception(
+            f"RAGFlow 检索失败: http status {response.status_code}, \n body: {response.text}"
+        )
+    result = response.json()
+    if result.get("code") != 0:
+        raise Exception(f"RAGFlow 检索失败：{result.get('message', result)}")
+    return result["data"]
 
 
 if __name__ == "__main__":
-    # print(get_datasets()) # 查
+    # test_search_from_dataset()
+    # print(get_datasets())
     # print(create_new_dataset("test_dataset"))
-    print(upload_to_ragflow_by_id("test.txt", "32d7e35833d411f1839a81bb6c992575"))
+    # print(upload_to_ragflow_by_id("test.txt", dataset_id))
+    print(search_from_dataset('非商旅平台行程申请审批单','2fde7d98558e11f1a0325562b53a43da'))
+

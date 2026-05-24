@@ -1,172 +1,46 @@
 <template>
   <div class="login-container">
-    <!-- Starry/Tech Background -->
     <div class="tech-container-bg"></div>
 
-    <div class="login-box">
-      <!-- Decor Corners -->
+    <div class="notice-box">
+      <!-- 装饰角落 -->
       <div class="corner-top-left"></div>
       <div class="corner-top-right"></div>
       <div class="corner-bottom-left"></div>
       <div class="corner-bottom-right"></div>
 
-      <!-- Left: Branding & Decoration -->
-      <div class="login-left">
-        <div class="brand-info">
-          <div class="logo-placeholder">
-            <el-icon>
-              <Monitor />
-            </el-icon>
-          </div>
-          <h1>科研情报系统</h1>
-          <p>Scientific Research Intelligence System</p>
-        </div>
-        <div class="tech-decoration">
-          <div class="circle-1"></div>
-          <div class="circle-2"></div>
-        </div>
+      <!-- 图标 -->
+      <div class="notice-icon">
+        <el-icon><Lock /></el-icon>
       </div>
 
-      <!-- Right: Login Form -->
-      <div class="login-right">
-        <div class="form-header">
-          <h2>欢迎登录 / <span class="highlight">LOGIN</span></h2>
-          <p>请输入您的账号信息进入系统</p>
+      <!-- 标题 -->
+      <h1 class="notice-title">科研情报系统</h1>
+      <p class="notice-subtitle">Scientific Research Intelligence System</p>
+
+      <!-- 提示信息 -->
+      <div class="notice-content">
+        <div class="notice-tip">
+          <el-icon class="tip-icon"><WarningFilled /></el-icon>
+          <span>本系统仅支持通过统一登录入口访问</span>
         </div>
+        <p class="notice-desc">请通过以下地址登录后跳转进入本系统：</p>
+        <a class="notice-link" href="https://10.68.16.92/" target="_self">
+          <el-icon><Link /></el-icon>
+          https://10.68.16.92/
+        </a>
+      </div>
 
-        <div class="login-form">
-          <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef" label-position="top">
-            <el-form-item label="用户名" prop="username">
-              <el-input v-model="loginForm.username" placeholder="请输入用户名" :prefix-icon="User" autocomplete="username" />
-            </el-form-item>
-
-            <el-form-item label="密码" prop="password">
-              <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" :prefix-icon="Lock"
-                show-password autocomplete="current-password" />
-            </el-form-item>
-
-            <el-form-item>
-              <el-button type="primary" class="login-button tech-btn" :loading="isLoading" @click="handleLogin"
-                :disabled="isLoading">
-                <span>{{ isLoading ? '登录中...' : '登 录 系 统' }}</span>
-                <el-icon class="btn-icon">
-                  <ArrowRight />
-                </el-icon>
-              </el-button>
-            </el-form-item>
-          </el-form>
-
-          <div v-if="errorMsg" class="error-message">
-            <el-icon>
-              <WarningFilled />
-            </el-icon>
-            {{ errorMsg }}
-          </div>
-        </div>
-
-        <div class="login-footer">
-          <p>&copy; {{ new Date().getFullYear() }} 科研情报系统 测试</p>
-        </div>
+      <!-- 底部 -->
+      <div class="notice-footer">
+        <p>&copy; {{ new Date().getFullYear() }} 科研情报系统</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { User, Lock, WarningFilled, Monitor, ArrowRight } from '@element-plus/icons-vue'
-import request from './api/request'
-import { setUserIdCookie, setUserNameCookie, setExpireTimeCookie, setPermissionCookie } from './utils/authUtils'
-
-const router = useRouter()
-const isLoading = ref(false)
-const errorMsg = ref('')
-const loginFormRef = ref(null)
-
-// 登录表单数据
-const loginForm = reactive({
-  username: '',
-  password: ''
-})
-
-// 表单验证规则
-const loginRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 1, max: 50, message: '用户名长度应为1-50个字符', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 1, max: 50, message: '密码长度应为1-50个字符', trigger: 'blur' }
-  ]
-}
-
-// 处理登录
-const handleLogin = async () => {
-  // 验证表单
-  try {
-    await loginFormRef.value.validate()
-
-    // 清除之前的错误信息
-    errorMsg.value = ''
-    isLoading.value = true
-
-    // 调用登录接口
-    const response = await request.post('/system/login', {
-      username: loginForm.username,
-      password: loginForm.password
-    })
-
-    // 处理响应
-    if (response.data && response.data.code === 200) {
-      // 登录成功，获取用户ID
-      const userId = response.data.data.user_id
-      const userName = response.data.data.user_name
-      const permission = response.data.data.permission
-
-      // 使用统一的authUtils中的函数设置cookie
-      setUserIdCookie(userId, 30)
-      // 设置user_name
-      setUserNameCookie(userName)
-      // 设置permission
-      setPermissionCookie(permission, 30)
-
-      // 设置单独的截止日期字段 (当前时间 + 30分钟的时间戳)
-      const expireTimestamp = new Date().getTime() + 30 * 60 * 1000;
-      setExpireTimeCookie(expireTimestamp, 30)
-
-      ElMessage.success('登录成功')
-
-      // 跳转至首页或指定页面
-      setTimeout(() => {
-        router.push('/literatureSearch')
-      }, 1000)
-      // 刷新页面
-      setTimeout(() => {
-        location.reload();
-      }, 1000)
-
-    } else {
-      // 登录失败
-      errorMsg.value = response.data?.msg || '登录失败，请重试'
-    }
-  } catch (error) {
-    console.error('登录错误:', error)
-    if (error.response) {
-      // 服务器返回错误
-      errorMsg.value = error.response.data?.msg || '用户名或密码错误'
-    } else if (error.message && error.message.includes('Failed to validate form')) {
-      // 表单验证失败，不显示错误信息
-    } else {
-      // 其他错误
-      errorMsg.value = '登录失败，请检查网络连接'
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
+import { Lock, WarningFilled, Link } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
@@ -174,7 +48,6 @@ const handleLogin = async () => {
   height: 100vh;
   width: 100vw;
   background-color: #0b0f19;
-  /* Premium abstract background for liquid glass effect */
   background-image:
     radial-gradient(circle at 15% 50%, rgba(0, 195, 255, 0.25), transparent 50%),
     radial-gradient(circle at 85% 30%, rgba(0, 85, 255, 0.3), transparent 50%),
@@ -189,7 +62,6 @@ const handleLogin = async () => {
 }
 
 .tech-container-bg {
-  /* Orbs for glass interaction */
   position: absolute;
   top: 0;
   left: 0;
@@ -205,26 +77,21 @@ const handleLogin = async () => {
 }
 
 @keyframes orbDrift {
-  0% {
-    transform: scale(1) translate(0, 0);
-  }
-
-  50% {
-    transform: scale(1.1) translate(30px, -30px);
-  }
-
-  100% {
-    transform: scale(0.9) translate(-30px, 30px);
-  }
+  0%   { transform: scale(1)   translate(0, 0); }
+  50%  { transform: scale(1.1) translate(30px, -30px); }
+  100% { transform: scale(0.9) translate(-30px, 30px); }
 }
 
-.login-box {
+/* 通知卡片 */
+.notice-box {
   position: relative;
   z-index: 1;
   display: flex;
-  width: 900px;
-  height: 550px;
-  /* Liquid glass core setup */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 520px;
+  padding: 60px 60px 40px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
   border-radius: 36px;
   box-shadow:
@@ -234,11 +101,9 @@ const handleLogin = async () => {
   border: 1px solid rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(48px) saturate(180%);
   -webkit-backdrop-filter: blur(48px) saturate(180%);
-  transform-style: preserve-3d;
-  perspective: 1000px;
+  text-align: center;
 }
 
-/* Remove harsh tech corners */
 .corner-top-left,
 .corner-top-right,
 .corner-bottom-left,
@@ -246,236 +111,105 @@ const handleLogin = async () => {
   display: none;
 }
 
-.login-left {
-  flex: 1;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 40px;
-  overflow: hidden;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent);
-  border-top-left-radius: 36px;
-  border-bottom-left-radius: 36px;
-}
-
-.brand-info {
-  text-align: center;
-  z-index: 2;
-}
-
-.logo-placeholder {
-  font-size: 64px;
+/* 锁图标 */
+.notice-icon {
+  font-size: 56px;
   background: linear-gradient(135deg, #fff 0%, #a0cfff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 25px;
-  filter: drop-shadow(0 10px 20px rgba(0, 195, 255, 0.4));
+  margin-bottom: 20px;
+  filter: drop-shadow(0 8px 16px rgba(0, 195, 255, 0.4));
   animation: float 4s ease-in-out infinite;
 }
 
 @keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-12px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
 }
 
-.brand-info h1 {
-  font-size: 32px;
+.notice-title {
+  font-size: 28px;
   font-weight: 800;
-  color: #ffffff;
-  margin: 0 0 10px;
-  letter-spacing: 2px;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.brand-info p {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.tech-decoration {
-  display: none;
-  /* Hide old tech circles for modern glass UI */
-}
-
-.login-right {
-  flex: 1;
-  padding: 50px 60px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.form-header {
-  margin-bottom: 35px;
-}
-
-.form-header h2 {
-  font-size: 24px;
   color: #ffffff;
   margin: 0 0 8px;
-  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.notice-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0 0 36px;
+}
+
+/* 提示内容区 --  */
+.notice-content {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 36px;
+}
+
+.notice-tip {
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ffd666;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
 }
 
-.form-header .highlight {
-  background: linear-gradient(135deg, #00e5ff 0%, #005bb5 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 800;
-  margin-left: 8px;
-  font-size: 26px;
+.tip-icon {
+  font-size: 18px;
+  color: #ffd666;
 }
 
-.form-header p {
+.notice-desc {
   color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
-  margin: 0;
+  margin: 0 0 16px;
 }
 
-/* Glassmorphism Forms */
-.login-form :deep(.el-form-item__label) {
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 600;
-  font-size: 13px;
-  padding-bottom: 8px;
-}
-
-.login-form :deep(.el-input__wrapper) {
-  background-color: rgba(0, 0, 0, 0.15) !important;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
-  border-radius: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.login-form :deep(.el-input__wrapper.is-focus),
-.login-form :deep(.el-input__wrapper:hover) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
-}
-
-.login-form :deep(.el-input__inner) {
-  color: #ffffff !important;
-  height: 48px;
+.notice-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #00e5ff;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 10px 22px;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 12px;
+  background: rgba(0, 229, 255, 0.06);
+  transition: all 0.3s ease;
   letter-spacing: 0.5px;
 }
 
-.login-form :deep(.el-input__inner::placeholder) {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.login-form :deep(.el-input__prefix-inner) {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 18px;
-}
-
-.login-form :deep(.el-input__suffix-inner) {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.tech-btn {
-  width: 100%;
-  height: 52px;
-  margin-top: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: #ffffff;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(20px);
-}
-
-.tech-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+.notice-link:hover {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: rgba(0, 229, 255, 0.7);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
   transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-.tech-btn:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.btn-icon {
-  margin-left: 10px;
-  font-size: 18px;
-  transition: transform 0.3s;
-}
-
-.tech-btn:hover .btn-icon {
-  transform: translateX(4px);
-}
-
-.error-message {
-  background-color: rgba(255, 77, 79, 0.15);
-  border: 1px solid rgba(255, 77, 79, 0.4);
-  border-radius: 12px;
-  padding: 12px 15px;
-  margin-top: 15px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #ffaaaa;
-  font-size: 13px;
-  backdrop-filter: blur(10px);
-}
-
-.login-footer {
-  margin-top: auto;
-  text-align: center;
-  padding-top: 20px;
-}
-
-.login-footer p {
-  color: rgba(255, 255, 255, 0.4);
+.notice-footer p {
+  color: rgba(255, 255, 255, 0.3);
   font-size: 13px;
   margin: 0;
   letter-spacing: 1px;
 }
 
-@media (max-width: 850px) {
-  .login-box {
+@media (max-width: 600px) {
+  .notice-box {
     width: 90%;
-    height: auto;
-    flex-direction: column;
-    border-radius: 28px;
-  }
-
-  .login-left {
-    padding: 40px 30px;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    min-height: 200px;
-    border-radius: 28px 28px 0 0;
-  }
-
-  .login-right {
-    padding: 40px 30px;
+    padding: 40px 28px 30px;
+    border-radius: 24px;
   }
 }
 </style>

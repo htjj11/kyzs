@@ -371,6 +371,7 @@ const handleClose = () => {
 .editor-main {
   flex: 1;
   min-width: 0;
+  height: 85vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -420,35 +421,11 @@ const handleClose = () => {
   vertical-align: middle;
 }
 
-/* 让 TinyMCE 容器高度撑满 */
+/* TinyMCE 容器高度撑满 flex 父容器 */
 .editor-main :deep(.tox-tinymce) {
-  flex: 1;
+  flex: 1 !important;
+  min-height: 0 !important;
   border: none !important;
   border-radius: 0 !important;
-}
-
-.editor-main :deep(.tox-statusbar) {
-  border-radius: 0 !important;
-}
-
-/* 弹窗方正风格 */
-:deep(.square-dialog .el-dialog) {
-  border-radius: 2px;
-}
-:deep(.square-dialog .el-dialog__header) {
-  background-color: #f5f7fa;
-  border-bottom: 1px solid #e4e7ed;
-  margin-right: 0;
-  padding: 16px 24px;
-}
-:deep(.square-dialog .el-dialog__title) {
-  font-weight: 600;
-  color: #303133;
-}
-
-
-/* TinyMCE 容器高度修复 */
-.editor-main :deep(.tox-tinymce) {
-  height: 100% !important;
 }
 </style>

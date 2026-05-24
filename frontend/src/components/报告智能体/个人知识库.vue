@@ -20,6 +20,12 @@
             </el-icon>
             个人资料上传
           </el-button>
+          <el-button type="success" plain @click="goPersonalKbSearch">
+            <el-icon>
+              <Search />
+            </el-icon>
+            知识库检索
+          </el-button>
           <el-button type="primary" link @click="showSettingLabelModal = true" class="setting-labels-btn">
             <el-icon>
               <Setting />
@@ -262,13 +268,17 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/api/request'
 import { ElMessage, ElMessageBox, ElSelect, ElOption, ElLoading } from 'element-plus'
-import { Setting, Upload, Grid, List } from '@element-plus/icons-vue'
+import { Setting, Upload, Grid, List, Search } from '@element-plus/icons-vue'
 import ShowKnowledgeInfo from '@/components/small/show_knowledge_info.vue'
 import SettingLabel from '@/components/small/setting_label.vue'
 
 const router = useRouter()
 const goFileUpload = () => {
   router.push('/fileUpload')
+}
+
+const goPersonalKbSearch = () => {
+  router.push('/personal_kb_search')
 }
 
 // 视图模式：card 或 list
@@ -423,7 +433,7 @@ const editKnowledge = (item) => {
 const saveEdit = async () => {
   try {
     // 调用更新接口
-    const response = await request.post('/get_knowledge/update_knoledge_by_id', {
+    const response = await request.post('/personal_knowledgebase/update_knoledge_by_id', {
       knowledge_id: editForm.value.knowledge_id,
       knowledge_title: editForm.value.knowledge_title,
       knowledge_content: editForm.value.knowledge_content,
@@ -705,7 +715,7 @@ const downloadSourceFile = async (item) => {
     }
 
     ElLoading.service({ text: '正在准备下载...' });
-    const response = await request.post('/get_knowledge/get_file_by_id', {
+    const response = await request.post('/personal_knowledgebase/get_file_by_id', {
       file_name: fileName
     });
 

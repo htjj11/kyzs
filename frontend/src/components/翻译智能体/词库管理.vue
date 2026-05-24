@@ -67,7 +67,12 @@
         <el-table-column prop="from" label="来源" width="150" show-overflow-tooltip />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="editWord(row)">编辑</el-button>
+            <el-tooltip v-if="!hasDeletePermission" content="您没有编辑词汇的权限" placement="top">
+              <span style="display: inline-block; cursor: not-allowed;">
+                <el-button size="small" disabled style="pointer-events: none;">编辑</el-button>
+              </span>
+            </el-tooltip>
+            <el-button v-else size="small" @click="editWord(row)">编辑</el-button>
             <el-tooltip v-if="!hasDeletePermission" content="您没有删除词汇的权限" placement="top">
               <span style="display: inline-block; cursor: not-allowed; margin-left: 12px;">
                 <el-button size="small" type="danger" disabled style="pointer-events: none;">删除</el-button>

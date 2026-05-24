@@ -255,10 +255,16 @@ onMounted(() => {
   background-color: #f78989;
 }
 
-/* 全屏弹窗：让编辑器内容区撑满 */
+/* 全屏弹窗整体走 flex，让 body 自动占满剩余空间 */
+:deep(.template-editor-dialog.el-dialog--fullscreen) {
+  display: flex;
+  flex-direction: column;
+}
+
 :deep(.template-editor-dialog .el-dialog__body) {
+  flex: 1;
   padding: 0 !important;
-  height: calc(100vh - 55px);
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

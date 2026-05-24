@@ -1,5 +1,5 @@
 import axios from "axios";
-import api_url from "./config";
+import { api_url } from "./config";
 import {
     getUserIdFromCookie,
     setUserIdCookie,
@@ -7,7 +7,9 @@ import {
     setUserNameCookie,
     setExpireTimeCookie,
     getPermissionCookie,
-    setPermissionCookie
+    setPermissionCookie,
+    getRagflowIdFromCookie,
+    setRagflowIdCookie
 } from "@/utils/authUtils";
 
 // 验证授权状态的函数
@@ -44,6 +46,11 @@ api.interceptors.request.use(
             const permission = getPermissionCookie();
             if (permission) {
                 setPermissionCookie(permission, 30);
+            }
+
+            const ragflowId = getRagflowIdFromCookie();
+            if (ragflowId) {
+                setRagflowIdCookie(ragflowId, 30);
             }
         }
 

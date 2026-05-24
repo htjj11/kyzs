@@ -38,19 +38,62 @@ async def read_root():
     return {"message": "欢迎使用科研助手后端！"}
 
 
-@app.post('/delete_summary')
-async def delete_summary_api(
-    request: Request,
-    id: int = Body(..., description="记录id"),
-    user_id: str = Body(..., description="用户ID"),
-):
-    """
-    删除综述生成记录
-    """
-    response = delete_summary(id)
-    if response:
-        return {"code": 200, "msg": "success", "data": None}
-    return 0
+
+
 if __name__ == "__main__":
+    import threading
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+    import functools
+    import os
+    import ssl
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 证书路径（放在backend目录下）
+    cert_path = os.path.join(base_dir, "cert_2.pem")
+    key_path  = os.path.join(base_dir, "10.68.202.238_RSA.key")
+
+    # 自定义 Handler：支持 SPA history 模式路由回退
+    # 等同于 Nginx 的 try_files $uri $uri/ /index.html
+    class SPAHandler(SimpleHTTPRequestHandler):
+        def do_GET(self):
+            path = self.path.split('?')[0]  # 去掉 query string
+            # URL 解码（处理中文文件名如 /assets/公共知识库主页-xxx.js）
+            try:
+                import urllib.parse
+                decoded_path = urllib.parse.unquote(path)
+            except Exception:
+                decoded_path = path
+            if decoded_path == '/':
+                decoded_path = '/index.html'
+            full_path = os.path.join(self.directory, decoded_path.lstrip('/'))
+            if not os.path.isfile(full_path):
+                # 静态文件不存在 → 回退到 index.html（SPA 路由）
+                self.path = '/index.html'
+            return super().do_GET()
+
+    def run_frontend():
+        handler = functools.partial(
+            SPAHandler,
+            directory=os.path.join(base_dir,"frontend")
+        )
+        server = ThreadingHTTPServer(("0.0.0.0", 443), handler)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert_path, key_path)
+        server.socket = context.wrap_socket(server.socket, server_side=True)
+        print("前端服务运行在 https://0.0.0.0:443")
+        server.serve_forever()
+
+    t = threading.Thread(target=run_frontend, daemon=True)
+    t.start()
+
+    # FastAPI 走 HTTPS 8443 端口
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8443,
+        ssl_certfile=cert_path,
+        ssl_keyfile=key_path,
+        reload=True
+    )

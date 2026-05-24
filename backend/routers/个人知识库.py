@@ -40,6 +40,32 @@ def _ensure_public_file_hash_schema() -> None:
         fetch="none",
     )
 
+
+def _get_or_create_user_rag_dataset(user_id: int) -> str:
+    """获取用户绑定的 RAG 知识库 id；不存在则仅创建知识库并写入绑定表（此时不创建对话）。"""
+    from services.ragflow_service import create_new_dataset
+
+    rows = sqlite_execute(
+        "SELECT ragflow_id FROM `个人知识库绑定` WHERE 用户id=?", (user_id,)
+    )
+    if rows:
+        rag_dataset_id = rows[0]["ragflow_id"]
+        print(f"rag知识库id为：{rag_dataset_id}")
+        return rag_dataset_id
+
+    user_name = sqlite_execute("SELECT name FROM `user` WHERE id=?", (user_id,))
+    name = user_name[0]["name"]
+    rag_dataset_id = create_new_dataset(f"用户{name}的个人知识库")
+    sqlite_execute(
+        "INSERT INTO `个人知识库绑定` (用户id, ragflow_id) VALUES (?, ?)",
+        (user_id, rag_dataset_id),
+    )
+    print(f"创建rag知识库成功，id为：{rag_dataset_id}")
+    return rag_dataset_id
+
+
+
+
 router = APIRouter(
     prefix="/personal_knowledgebase",
     tags=["与知识库相关的操作接口"],
@@ -88,27 +114,13 @@ async def add_knowledge(
         from services.ragflow_service import (
             upload_to_ragflow_by_id,
             start_parsing_document_by_id,
-            create_new_dataset,
         )
-
+        
         file_list = data_dict.get('data', [])
         if not file_list:
             return {"code": 400, "msg": "未传入文件数据", "data": None}
 
-        rag_dataset_rows = sqlite_execute(
-            "SELECT ragflow_id FROM `个人知识库绑定` WHERE 用户id=?", (user_id,)
-        )
-        if not rag_dataset_rows:
-            user_name = sqlite_execute("SELECT name FROM `user` WHERE id=?", (user_id,))
-            rag_dataset_id = create_new_dataset(f"用户{user_name[0]['name']}的个人知识库")
-            sqlite_execute(
-                "INSERT INTO `个人知识库绑定` (用户id, ragflow_id) VALUES (?, ?)",
-                (user_id, rag_dataset_id),
-            )
-            print(f"创建rag知识库成功，id为：{rag_dataset_id}")
-        else:
-            rag_dataset_id = rag_dataset_rows[0]['ragflow_id']
-            print(f"rag知识库id为：{rag_dataset_id}")
+        rag_dataset_id = _get_or_create_user_rag_dataset(user_id)
 
         for idx, file_item in enumerate(file_list):
             print(f"正在添加第 {idx + 1}/{len(file_list)} 个文件: {file_item.get('title_string', '未知')}")
@@ -164,18 +176,7 @@ async def add_knowledge(
     if add_result['code'] == 200:
         from services.ragflow_service import upload_to_ragflow_by_id
 
-        #先判断当前用户下是否存在rag知识库id，如果不存在，则创建一个
-        rag_dataset_id = sqlite_execute("SELECT ragflow_id FROM `个人知识库绑定` WHERE 用户id=?", (user_id,))
-        if not rag_dataset_id:
-            #如果不存在，则以用户名字创建一个rag知识库
-            user_name = sqlite_execute("SELECT name FROM `user` WHERE id=?", (user_id,))
-            from services.ragflow_service import create_new_dataset
-            rag_dataset_id = create_new_dataset(f"用户{user_name[0]['name']}的个人知识库")
-            sqlite_execute("INSERT INTO `个人知识库绑定` (用户id, ragflow_id) VALUES (?, ?)", (user_id, rag_dataset_id))
-            print(f"创建rag知识库成功，id为：{rag_dataset_id}")
-        else:
-            rag_dataset_id = rag_dataset_id[0]['ragflow_id']
-            print(f"rag知识库id为：{rag_dataset_id}")
+        rag_dataset_id = _get_or_create_user_rag_dataset(user_id)
         #如果收藏内容类型是1-4文本，则临时变为txt文件，再上传至rag知识库
         if type_id in [1, 2, 3, 4]:
             safe_title = re.sub(r'[<>:"/\\|?*\n\r\t]', '_', knowledge_title)[:200] or "untitled"
@@ -193,6 +194,7 @@ async def add_knowledge(
             #触发rag知识库的指定文档解析
             from services.ragflow_service import start_parsing_document_by_id
             start_parsing_document_by_id(rag_dataset_id, [rag_file_id])
+
             return {"code": 200, "msg": "success", "data": None}
     
 
@@ -207,15 +209,33 @@ async def delete_knowledge_by_id(
     print(f'用户请求删除知识库内容：{knowledge_id}')
     #判断type_id是否为5，如果是且mark_info可以被解析为json，则删除文件  
     knowledge_info = sqlite_execute("SELECT * FROM `knowledgebase` WHERE id=?", (knowledge_id,))
-    if knowledge_info[0]['type_id'] == 5:
-        #如果knowledge_info的mark_info中包含original_filename字符串，则表示他是一个文件
-        if 'original_filename' in knowledge_info[0]['mark_info']:
-            file_name = eval(knowledge_info[0]['mark_info'])['filename']
-            file_path = f"file_data/{file_name}"
+    if not knowledge_info:
+        return {"code": 404, "msg": "未找到知识记录", "data": None}
+    k_info = knowledge_info[0]
+
+    # type_id=5 时删除本地文件
+    if k_info['type_id'] == 5 and 'original_filename' in k_info.get('mark_info', ''):
+        try:
+            mark_info = json.loads(k_info['mark_info'])
+            file_path = f"file_data/{mark_info['filename']}"
+            os.remove(file_path)
+        except Exception as e:
+            print(f'删除本地文件失败：{e}')
+
+    # 若已同步到 RAG，则从用户个人知识库中删除对应文档
+    rag_id = k_info.get('rag_id')
+    if rag_id:
+        rag_bind = sqlite_execute(
+            "SELECT ragflow_id FROM `个人知识库绑定` WHERE 用户id=?", (k_info['user_id'],)
+        )
+        if rag_bind:
             try:
-                os.remove(file_path)
+                from services.ragflow_service import delete_file_from_ragflow_by_id
+                delete_file_from_ragflow_by_id(rag_bind[0]['ragflow_id'], rag_id)
+                print(f'已从 RAG 删除文档：{rag_id}')
             except Exception as e:
-                print(f'删除文件失败：{e}')
+                print(f'从 RAG 删除文档失败：{e}')
+
     res = sqlite_execute("DELETE FROM `knowledgebase` WHERE id=?", (knowledge_id,))
     return {"code": 200, "msg": 'success', "data": res}
 
@@ -406,3 +426,40 @@ async def transfer_to_public(
         }
     }
 
+# 个人知识库 RAG 检索
+@router.post("/rag_search")
+async def rag_search_personal_knowledge(
+    request: Request,
+    user_id: int = Body(..., embed=True, description="用户id"),
+    question: str = Body(..., embed=True, description="检索问题"),
+    top_k: int = Body(10, embed=True, description="返回条数"),
+    similarity_threshold: float = Body(0.2, embed=True, description="相似度阈值"),
+):
+    """
+    在当前用户绑定的个人 RAG 知识库中进行语义检索。
+    """
+    question = (question or "").strip()
+    if not question:
+        return {"code": 400, "msg": "检索问题不能为空", "data": None}
+
+    rag_bind = sqlite_execute(
+        "SELECT ragflow_id FROM `个人知识库绑定` WHERE 用户id=?", (user_id,)
+    )
+    if not rag_bind:
+        return {"code": 400, "msg": "未绑定个人知识库，请先收藏内容", "data": None}
+
+    rag_dataset_id = rag_bind[0]["ragflow_id"]
+    print(f"用户 {user_id} 在个人知识库 {rag_dataset_id} 检索: {question}")
+
+    try:
+        from services.ragflow_service import search_from_dataset
+        data = search_from_dataset(
+            question=question,
+            rag_dataset_id=rag_dataset_id,
+            top_k=top_k,
+            similarity_threshold=similarity_threshold,
+        )
+        return {"code": 200, "msg": "success", "data": data}
+    except Exception as e:
+        print(f"个人知识库 RAG 检索失败: {e}")
+        return {"code": 500, "msg": f"检索失败: {e}", "data": None}

@@ -105,6 +105,41 @@ export function getExpireTimeFromCookie() {
 }
 
 /**
+ * 从cookie中获取ragflow_id
+ * @returns {string|null}
+ */
+export function getRagflowIdFromCookie() {
+  try {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('ragflow_id='))
+      ?.split('=')[1];
+    if (!cookieValue) return null;
+    const decoded = decodeURIComponent(cookieValue);
+    return decoded || null;
+  } catch (error) {
+    console.error('获取cookie中的ragflow_id失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 设置ragflow_id
+ * @param {string|null} ragflowId
+ * @param {number} minutes 过期时间（分钟）
+ */
+export function setRagflowIdCookie(ragflowId, minutes = 30) {
+  if (ragflowId === null || ragflowId === undefined || ragflowId === '') {
+    document.cookie = 'ragflow_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  } else {
+    const encodedValue = encodeURIComponent(String(ragflowId));
+    const expires = new Date();
+    expires.setTime(expires.getTime() + minutes * 60 * 1000);
+    document.cookie = `ragflow_id=${encodedValue}; expires=${expires.toUTCString()}; path=/;`;
+  }
+}
+
+/**
  * 设置permission
  * @param {string|null|object} permission 用户权限，设为null表示清除cookie
  * @param {number} minutes 过期时间（分钟）
@@ -146,6 +181,15 @@ export function getPermissionCookie() {
 }
 
 /**
+ * 是否拥有超级管理员权限（permission 含 admin:admin）
+ * @returns {boolean}
+ */
+export function hasSuperAdminPermission() {
+  const permissions = getPermissionCookie() || [];
+  return Array.isArray(permissions) && permissions.includes('admin:admin');
+}
+
+/**
  * 清除登录状态（注销）
  */
 export function logoutUser() {
@@ -153,4 +197,5 @@ export function logoutUser() {
   setUserNameCookie(null);
   setExpireTimeCookie(null);
   setPermissionCookie(null);
+  setRagflowIdCookie(null);
 }

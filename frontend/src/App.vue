@@ -188,7 +188,32 @@
     <about-system />
     <template #footer>
       <div class="dialog-footer">
+        <el-button
+          v-if="isSuperAdmin"
+          type="danger"
+          plain
+          @click="showSuperAdminModal = true"
+        >
+          超级管理员
+        </el-button>
         <el-button @click="showAboutModal = false">关闭</el-button>
+      </div>
+    </template>
+  </el-dialog>
+
+  <!-- 超级管理员弹窗（仅 admin:admin 权限可见入口） -->
+  <el-dialog
+    v-model="showSuperAdminModal"
+    title="超级管理员"
+    width="720px"
+    append-to-body
+    destroy-on-close
+    class="square-dialog"
+  >
+    <super-admin-permission />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="showSuperAdminModal = false">关闭</el-button>
       </div>
     </template>
   </el-dialog>
@@ -196,7 +221,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { getUserIdFromCookie, logoutUser, getUserNameFromCookie, getExpireTimeFromCookie } from '@/utils/authUtils'
+import {
+  getUserIdFromCookie,
+  logoutUser,
+  getUserNameFromCookie,
+  getExpireTimeFromCookie,
+  hasSuperAdminPermission
+} from '@/utils/authUtils'
 import {
   Document,
   Location,
@@ -216,6 +247,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import CountSetting from '@/components/系统/账户设置.vue'
 import AboutSystem from '@/components/系统/关于系统.vue'
+import SuperAdminPermission from '@/components/系统/超级管理员权限.vue'
 
 // 侧边栏折叠状态
 const isCollapse = ref(false)
@@ -225,7 +257,10 @@ const currentUserId = ref<string | null>(null)
 const currentUserName = ref<string | null>(null)
 const showAccountSettingModal = ref(false)
 const showAboutModal = ref(false)
+const showSuperAdminModal = ref(false)
 const router = useRouter()
+
+const isSuperAdmin = computed(() => hasSuperAdminPermission())
 
 // 存储真实的登录状态，使得Vue能响应其变化
 const isLoggedInStatus = ref(getUserIdFromCookie() !== null);
@@ -431,6 +466,8 @@ const handleClose = (key: string, keyPath: string[]) => {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
 }
 
 /* 主体容器样式 */

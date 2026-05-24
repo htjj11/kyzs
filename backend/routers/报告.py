@@ -187,8 +187,8 @@ async def edit_template(
     template_name: str = Body(..., embed=True, description="模板名称"),
     template_content: str = Body(..., embed=True, description="模板内容")
 ):
-    #检查用户权限
-    if not check_permission(user_id, "edit_template"):
+    #检查用户权限   
+    if not check_permission(user_id, "report_template_edit:edit"):
         return {"code": 400, "msg": "无权限修改模板"}
         
     # 检查 template_id 是否存在于数据库中
@@ -213,7 +213,7 @@ async def delete_template(
     template_id: int = Body(..., embed=True, description="模板id")
 ):
     #检查用户权限
-    if not check_permission(user_id, "delete_template"):
+    if not check_permission(user_id, "report_template_edit:edit"):
         return {"code": 400, "msg": "无权限删除模板"}
         
     res = sqlite_execute("DELETE FROM `review_template` WHERE id=?", (template_id,))

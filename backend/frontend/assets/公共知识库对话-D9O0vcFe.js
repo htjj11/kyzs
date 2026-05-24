@@ -1,0 +1,1 @@
+import{_ as e,c as a,b as t,u as s,ar as c,o as r}from"./index-B_1S1aGo.js";const o={class:"chat-container"},_=["src"],n={__name:"公共知识库对话",setup(i){return(l,d)=>(r(),a("div",o,[t("iframe",{src:s(c),style:{width:"100%",height:"100%","min-height":"600px"},frameborder:"0"},null,8,_)]))}},p=e(n,[["__scopeId","data-v-95269c8a"]]);export{p as default};
