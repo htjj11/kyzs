@@ -297,6 +297,11 @@ onMounted(() => {
     if (isLoggedInStatus.value !== valid) {
       isLoggedInStatus.value = valid;
     }
+
+    // 同步更新用户名（修复 SSO 首次登录显示“未登录”的问题）
+    const userName = getUserNameFromCookie();
+    currentUserName.value = userName !== null ? userName : (valid ? currentUserName.value : '未登录');
+
     // 如果检查到cookie失效（未登录或时间已到），且当前路由不是登录页，强制跳转登出
     if (!valid && router.currentRoute.value.path !== '/login') {
       logoutUser(); // 清除可能残留的无效cookie
@@ -550,27 +555,17 @@ const handleClose = (key: string, keyPath: string[]) => {
   height: 100%;
   box-sizing: border-box;
   background: transparent;
-  padding: 8px 12px;
-  /* 减小间距，使得里边卡片更长更宽 */
+  padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 防止全局出现滚动条 */
 }
 
 .content-wrapper {
   flex: 1;
-  /* 撑满剩余全部空间，避免定高溢出 */
   width: 100%;
   min-height: 0;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(30px) saturate(150%);
-  -webkit-backdrop-filter: blur(30px) saturate(150%);
-  border-radius: 20px;
-  /* 稍微减弱圆角提升空间利用率 */
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
-  padding: 0px;
+  padding: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

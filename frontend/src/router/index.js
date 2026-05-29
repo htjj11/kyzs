@@ -199,7 +199,7 @@ router.beforeEach(async (to, from, next) => {
       return next({ path: to.path, query, replace: true });
     } else {
       // SSO 失败，跳转到登录页并提示
-      alert('SSO 登录失败，请重新登录。');
+      alert('您没有登录权限。');
       return next('/login');
     }
   }

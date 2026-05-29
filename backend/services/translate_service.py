@@ -7,7 +7,10 @@ import time
 import os
 
 from core.sqlLiteExec import sqlite_execute
+from services.第三方接口.大模型对话 import changcheng_ai_answer
 
+
+# 翻译单个字符串
 def translate_text_api(raw_text: str, translate_type: str, field_id: int):
     """
     翻译单个字符串，流程：
@@ -44,28 +47,24 @@ def translate_text_api(raw_text: str, translate_type: str, field_id: int):
     }
 
     def call_translate(prompt: str) -> dict:
-        """调用 SiliconFlow DeepSeek-V3，使用 Function Tool 强制返回标准 JSON。"""
-        url = "https://api.siliconflow.cn/v1/chat/completions"
-        payload = {
-            "model": "Pro/deepseek-ai/DeepSeek-V3",
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": False,
-            "max_tokens": 2048,
-            "temperature": 0.3,
-            "top_p": 0.7,
-            "tools": [translate_tool],
-            "tool_choice": {"type": "function", "function": {"name": "output_translation"}}
-        }
-        headers = {
-            "Authorization": "Bearer sk-wmsgbfgsvjxjmyopswmaqfxnwtgmvtwqgsigehxmgwoihgeg",
-            "Content-Type": "application/json"
-        }
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        response.raise_for_status()
-        arguments = response.json()['choices'][0]['message']['tool_calls'][0]['function']['arguments']
-        result = json.loads(arguments)
-        print(f"Function Tool 翻译结果: {result}")
-               
+        """调用长城AI，通过提示词强制返回 JSON {origin_text, translate_text}。"""
+        json_prompt = prompt + "\n\n请严格按照以下JSON格式返回，不要添加任何其他文字：\n{\"origin_text\": \"原文\", \"translate_text\": \"译文\"}"
+        
+        response_text = changcheng_ai_answer(json_prompt)
+        
+        # 尝试从返回文本中提取 JSON
+        try:
+            # 先尝试直接解析（strict=False 允许控制字符如 \t \n）
+            result = json.loads(response_text, strict=False)
+        except json.JSONDecodeError:
+            # 如果直接解析失败，尝试提取 JSON 块
+            match = re.search(r'\{[^{}]*"origin_text"[^{}]*"translate_text"[^{}]*\}', response_text, re.DOTALL)
+            if match:
+                result = json.loads(match.group(), strict=False)
+            else:
+                raise ValueError(f"无法从返回内容中提取JSON: {response_text}")
+        
+        print(f"长城AI翻译结果: {result}")
         return result
     # ---------- 主流程 ----------
     print('用户请求翻译:', raw_text[:40], '...')
@@ -110,7 +109,7 @@ def translate_text_api(raw_text: str, translate_type: str, field_id: int):
     return {'translate_result': translate_text, 'words_dict': matched}
 
 
-
+# 翻译字符串列表
 def translate_text_list_api(raw_text_list: list, translate_type: str, field_id: int):
     """
     分批并发翻译，规避 API 频控：
@@ -146,11 +145,11 @@ def translate_text_list_api(raw_text_list: list, translate_type: str, field_id: 
             
     return results
 
-
+# 创建翻译任务
 def create_new_translate_doc_mission(base64_pdf_string, topic, user_id):
     """
     创建翻译任务并执行翻译，由路由层通过 BackgroundTasks 异步调用，不阻塞请求响应。
-    执行完成后将翻译产物写入 ./file/ 目录，并将文件路径回写数据库（status=1 表示完成）。
+    执行完成后将翻译产物写入 ./file/translate_doc 目录，并将文件路径回写数据库（status=1 表示完成）。
     """
     sqlite_execute(
         "INSERT INTO translate_doc (name, status, raw_base64, user_id) VALUES (?, 0, ?, ?)",
@@ -162,125 +161,157 @@ def create_new_translate_doc_mission(base64_pdf_string, topic, user_id):
     output_docx_base64, output_pdf_base64 = translate_pdf(base64_pdf_string)
     file_name = time.strftime("%Y%m%d%H%M%S", time.localtime())
 
-    # 翻译产物存本地 ./file/ 目录，数据库只存路径
-    with open(f'./file_data/{file_name}.pdf', 'wb') as f:
+    # 翻译产物存本地 ./file/translate_doc 目录，数据库只存路径
+    with open(f'./file_data/translate_doc/{file_name}.pdf', 'wb') as f:
         f.write(base64.b64decode(output_pdf_base64))
-    with open(f'./file_data/{file_name}.docx', 'wb') as f:
+    with open(f'./file_data/translate_doc/{file_name}.docx', 'wb') as f:
         f.write(base64.b64decode(output_docx_base64))
  
     sqlite_execute(
         "UPDATE translate_doc SET status=1, output_pdf_base64=?, output_docx_base64=? WHERE id=?",
-        (f'./file_data/{file_name}.pdf', f'./file_data/{file_name}.docx', mission_id)
+        (f'./file_data/translate_doc/{file_name}.pdf', f'./file_data/translate_doc/{file_name}.docx', mission_id)
     )
     print('翻译任务id成功:', mission_id)
     return 'ok'
 
 
+
+# 翻译 PDF
 def translate_pdf(base64_pdf_string):
-    """
-    PDF 翻译主流程：
-        1. base64 解码 → 写临时文件 temp.pdf
-        2. pdf2docx 解析版式 → input.docx（保留图片、表格布局）
-        3. 提取所有纯文本段落，过滤含图片的段落
-        4. 并发翻译所有段落
-        5. 将译文写回 docx，保持原始排版
-        6. docx2pdf 转换为 PDF（Windows 依赖 Word，Linux 依赖 LibreOffice）
-    """ 
+    import tempfile
+    import shutil
+    import subprocess
     from pdf2docx import parse
     from docx import Document
-    from docx2pdf import convert
 
-    pdf_binary = base64.b64decode(base64_pdf_string)
-    with open("temp.pdf", "wb") as f:
-        f.write(pdf_binary)
+    
+    def get_all_paragraphs(document):
+        """提取文档中所有段落（含表格内段落），返回 (paragraph, is_in_table) 列表"""
+        result = []
+        # 顶层段落
+        for para in document.paragraphs:
+            result.append(para)
+        # 表格内段落
+        for table in document.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for para in cell.paragraphs:
+                        result.append(para)
+        return result
+
+    LIBREOFFICE_PATH = r"C:\Program Files\LibreOffice\program\soffice.exe"
+    temp_dir = tempfile.mkdtemp(prefix="translate_")
+
     try:
-        parse("temp.pdf", "input.docx")
-    except Exception as e:
-        print(f"PDF解析出错: {e}")
+        # 1. 解码 PDF
+        temp_pdf = os.path.join(temp_dir, "temp.pdf")
+        with open(temp_pdf, "wb") as f:
+            f.write(base64.b64decode(base64_pdf_string))
 
-    document = Document('input.docx')
-    list_paragraphs = []
-    for paragraph in document.paragraphs:
-        # 含 pic:pic 标签的段落是图片，跳过不翻译
-        if any("pic:pic" in run.element.xml for run in paragraph.runs):
-            continue
-        init = True
-        for run in paragraph.runs:
-            if init:
-                init = False
-                list_paragraphs.append(paragraph.text)
+        # 2. PDF → docx
+        input_docx = os.path.join(temp_dir, "input.docx")
+        try:
+            parse(temp_pdf, input_docx)
+        except Exception as e:
+            print(f"PDF解析出错: {e}")
+        finally:
+            if os.path.exists(temp_pdf):
+                os.remove(temp_pdf)
+
+        # 3. 读取所有段落（含表格内）
+        document = Document(input_docx)
+        all_paragraphs = get_all_paragraphs(document)
+
+        print(f"顶层段落数: {len(document.paragraphs)}")
+        print(f"总段落数（含表格）: {len(all_paragraphs)}")
+
+        list_paragraphs = []   # 待翻译文本
+        para_index_map = []    # 记录哪些段落需要翻译（用于回写）
+
+        for para in all_paragraphs:
+            text = para.text.strip()
+            # 跳过空段落（无文字的纯图片段落也在此被跳过）
+            if not text:
+                continue
+            # 合并 runs：只保留第一个有文字的 run，其余文字 run 清空
+            first_text_run = None
+            for run in para.runs:
+                if run.text and run.text.strip() and first_text_run is None:
+                    first_text_run = run
+                elif run.text and run.text.strip():
+                    run.text = ""
+            if first_text_run is None:
+                continue
+            list_paragraphs.append(text)
+            para_index_map.append(para)
+
+        print(f"提取到 {len(list_paragraphs)} 个段落待翻译")
+
+        if not list_paragraphs:
+            # 兜底：直接返回原始 docx，pdf 为 None
+            with open(input_docx, "rb") as f:
+                docx_b64 = base64.b64encode(f.read()).decode('utf-8')
+            return [docx_b64, None]
+
+        # 4. 翻译
+        translated = translate_text_list_api(list_paragraphs, 'en2zh', 1)
+
+        # 5. 回写翻译结果
+        for i, para in enumerate(para_index_map):
+            first_text_written = False
+            for run in para.runs:
+                if run.text and run.text.strip() and not first_text_written:
+                    run.text = translated[i]
+                    first_text_written = True
+                elif run.text and run.text.strip():
+                    run.text = ""
+
+        # 6. 保存翻译后 docx
+        output_docx = os.path.join(temp_dir, "output.docx")
+        document.save(output_docx)
+        del document, translated, list_paragraphs
+
+        if os.path.exists(input_docx):
+            os.remove(input_docx)
+
+        with open(output_docx, "rb") as f:
+            docx_b64 = base64.b64encode(f.read()).decode('utf-8')
+
+        # 7. LibreOffice 转 PDF
+        pdf_b64 = None
+        try:
+            result = subprocess.run(
+                [
+                    LIBREOFFICE_PATH,
+                    "--headless",
+                    "--norestore",
+                    "--convert-to", "pdf",
+                    "--outdir", temp_dir,
+                    output_docx,
+                ],
+                timeout=60,
+                capture_output=True,
+                text=True,
+            )
+            # LibreOffice 输出文件名与输入同名，扩展名换成 .pdf
+            output_pdf = os.path.join(temp_dir, "output.pdf")
+            if result.returncode == 0 and os.path.exists(output_pdf):
+                with open(output_pdf, "rb") as f:
+                    pdf_b64 = base64.b64encode(f.read()).decode('utf-8')
             else:
-                # 同一段落多个 run 合并为第一个，其余清空，保持格式不乱
-                run.text = ""
+                print(f"LibreOffice转换失败，returncode={result.returncode}")
+                print(f"stderr: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            print("LibreOffice转换超时")
+        except Exception as e:
+            print(f"docx转PDF失败: {e}")
 
-    translated = translate_text_list_api(list_paragraphs, 'en2zh', 1)
-    p_index = 0
-    for paragraph in document.paragraphs:
-        if any("pic:pic" in run.element.xml for run in paragraph.runs):
-            continue
-        init = True
-        for run in paragraph.runs:
-            if init:
-                init = False
-                run.text = translated[p_index]
-                p_index += 1
-            else:
-                run.text = ""
+        return [docx_b64, pdf_b64]
 
-    document.save('output.docx')
-    try:
-        convert("output.docx", "output.pdf")
-    except Exception:
-        pass
-
-    with open("output.docx", "rb") as f:
-        docx_b64 = base64.b64encode(f.read()).decode('utf-8')
-    with open("output.pdf", "rb") as f:
-        pdf_b64 = base64.b64encode(f.read()).decode('utf-8')
-
-    os.remove("temp.pdf")
-    os.remove("input.docx")
-    return [docx_b64, pdf_b64]
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def get_all_translate_doc_list_api(user_id):
-    res = sqlite_execute(
-        "SELECT id, name, status FROM translate_doc WHERE user_id=?", (user_id,)
-    )
-    return {'translate_doc_list': res}
-
-
-def get_translate_doc_detail_api(doc_id):
-    # 数据库只存文件路径，读取时从磁盘读取并转 base64 返回前端
-    res = sqlite_execute(
-        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=?", (doc_id,)
-    )[0]
-    with open(res['output_pdf_base64'], 'rb') as f:
-        pdf_b64 = base64.b64encode(f.read()).decode('utf-8')
-    with open(res['output_docx_base64'], 'rb') as f:
-        docx_b64 = base64.b64encode(f.read()).decode('utf-8')
-    return {'translate_doc_detail': {'output_pdf_base64': pdf_b64, 'output_docx_base64': docx_b64}}
-
-
-def del_translate_doc_api(doc_id):
-    res = sqlite_execute(
-        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=?", (doc_id,)
-    )[0]
-    os.remove(res['output_pdf_base64'])
-    os.remove(res['output_docx_base64'])
-    sqlite_execute("DELETE FROM translate_doc WHERE id=?", (doc_id,))
-    return 'ok'
-
-
-def get_translate_word_by_content_api(content1: str):
-    # LIKE 模糊查询同时搜索原文（content1）和译文（content2），LIMIT 50 防止返回过多
-    res = sqlite_execute(
-        "SELECT * FROM translate_words WHERE content1 LIKE ? OR content2 LIKE ? LIMIT 50",
-        (f'%{content1}%', f'%{content1}%')
-    )
-    if res:
-        return {'code': 200, 'msg': 'success', 'data': res}
-    return {'code': 404, 'msg': '词汇不存在', 'data': None}
 
 
 def add_translate_word_api(ts_type: str, field_id: int, content1: str, content2: str, content3: str, from_source: str):
@@ -295,44 +326,10 @@ def add_translate_word_api(ts_type: str, field_id: int, content1: str, content2:
         return {'code': 500, 'msg': f'添加失败: {str(e)}', 'data': None}
 
 
-def update_translate_word_api(word_id: int, ts_type: str = None, field_id: int = None,
-                              content1: str = None, content2: str = None, content3: str = None,
-                              from_source: str = None):
-    """
-    动态构建 UPDATE 语句，只更新传入的字段。
-    字段名（列名）不能用 %s 参数化，但值全部通过 params 传递防止注入。
-    """
-    fields, params = [], []
-    if ts_type is not None:
-        fields.append("ts_type=?"); params.append(ts_type)
-    if field_id is not None:
-        fields.append("field_id=?"); params.append(field_id)
-    if content1 is not None:
-        fields.append("content1=?"); params.append(content1)
-    if content2 is not None:
-        fields.append("content2=?"); params.append(content2)
-    if content3 is not None:
-        fields.append("content3=?"); params.append(content3)
-    if from_source is not None:
-        fields.append("`from`=?"); params.append(from_source)
-
-    if not fields:
-        return {'code': 400, 'msg': '没有提供要更新的字段', 'data': None}
-
-    params.append(word_id)
-    try:
-        sqlite_execute(
-            f"UPDATE translate_words SET {', '.join(fields)} WHERE id=?",
-            tuple(params)
-        )
-        return {'code': 200, 'msg': 'success', 'data': None}
-    except Exception as e:
-        return {'code': 500, 'msg': f'更新失败: {str(e)}', 'data': None}
-
-
-def delete_translate_word_api(word_id: int):
-    try:
-        sqlite_execute("DELETE FROM translate_words WHERE id=?", (word_id,))
-        return {'code': 200, 'msg': 'success', 'data': None}
-    except Exception as e:
-        return {'code': 500, 'msg': f'删除失败: {str(e)}', 'data': None}
+if __name__ == "__main__":
+    # 测试某个文件翻译是否正常
+    test_file_path = r"C:\Users\shuxi\Downloads\中英文文档 (1)\Enhancing Information Retrieval in the Drilling Domain_ Zero-Shot Learning ng.pdf"
+    with open(test_file_path, 'rb') as f:
+        base64_pdf_string = base64.b64encode(f.read()).decode('utf-8')
+    translate_pdf(base64_pdf_string)
+    print("翻译完成")

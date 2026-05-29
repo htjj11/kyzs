@@ -3,19 +3,13 @@
 '''
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
+import os
 from fastapi import APIRouter, Request, Body, BackgroundTasks
 from services.translate_service import (
     translate_text_api,
     translate_text_list_api,
     create_new_translate_doc_mission,
-    get_all_translate_doc_list_api,
-    get_translate_doc_detail_api,
-    del_translate_doc_api,
-    get_translate_word_by_content_api,
     add_translate_word_api,
-    update_translate_word_api,
-    delete_translate_word_api,
 )
 
 executor = ThreadPoolExecutor()
@@ -80,10 +74,11 @@ async def get_all_translate_doc_list(
     """
     获取所有翻译文档列表（不包括文档base64）
     """
-    response = get_all_translate_doc_list_api(user_id)
-    if response:
-        return response
-    return 0
+    from core.sqlLiteExec import sqlite_execute
+    res = sqlite_execute(
+        "SELECT id, name, status FROM translate_doc WHERE user_id=?", (user_id,)
+    )
+    return {'translate_doc_list': res}
 
 
 @router.post('/get_translate_doc_detail')
@@ -94,10 +89,16 @@ async def get_translate_doc_detail(
     """
     获取某个翻译文档详情（包括文档base64）
     """
-    response = get_translate_doc_detail_api(doc_id)
-    if response:
-        return response
-    return 0
+    import base64
+    from core.sqlLiteExec import sqlite_execute
+    res = sqlite_execute(
+        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=?", (doc_id,)
+    )[0]
+    with open(res['output_pdf_base64'], 'rb') as f:
+        pdf_b64 = base64.b64encode(f.read()).decode('utf-8')
+    with open(res['output_docx_base64'], 'rb') as f:
+        docx_b64 = base64.b64encode(f.read()).decode('utf-8')
+    return {'translate_doc_detail': {'output_pdf_base64': pdf_b64, 'output_docx_base64': docx_b64}}
 
 
 @router.post('/delete_translate_doc')
@@ -108,10 +109,14 @@ async def delete_translate_doc(
     """
     删除某个翻译文档
     """
-    response = del_translate_doc_api(doc_id)
-    if response:
-        return response
-    return 0
+    from core.sqlLiteExec import sqlite_execute
+    res = sqlite_execute(
+        "SELECT output_pdf_base64, output_docx_base64 FROM translate_doc WHERE id=?", (doc_id,)
+    )[0]
+    os.remove(res['output_pdf_base64'])
+    os.remove(res['output_docx_base64'])
+    sqlite_execute("DELETE FROM translate_doc WHERE id=?", (doc_id,))
+    return 'ok'
 
 
 @router.post('/get_translate_word_by_content')
@@ -122,10 +127,13 @@ async def get_translate_word_by_content(
     """
     根据单词获取匹配的词汇
     """
-    loop = asyncio.get_running_loop()
-    response = await loop.run_in_executor(executor, get_translate_word_by_content_api, content1)
-    if response['code'] == 200:
-        return response
+    from core.sqlLiteExec import sqlite_execute
+    res = sqlite_execute(
+        "SELECT * FROM translate_words WHERE content1 LIKE ? OR content2 LIKE ? LIMIT 50",
+        (f'%{content1}%', f'%{content1}%')
+    )
+    if res:
+        return {'code': 200, 'msg': 'success', 'data': res}
     return {'code': 404, 'msg': '词汇不存在', 'data': None}
 
 
@@ -164,12 +172,33 @@ async def update_translate_word(
     """
     更新翻译词汇
     """
-    loop = asyncio.get_running_loop()
-    response = await loop.run_in_executor(executor, update_translate_word_api,
-                                          word_id, ts_type, field_id, content1, content2, content3, from_source)
-    if response:
-        return response
-    return {'code': 500, 'msg': '更新失败', 'data': None}
+    from core.sqlLiteExec import sqlite_execute
+    fields, params = [], []
+    if ts_type is not None:
+        fields.append("ts_type=?"); params.append(ts_type)
+    if field_id is not None:
+        fields.append("field_id=?"); params.append(field_id)
+    if content1 is not None:
+        fields.append("content1=?"); params.append(content1)
+    if content2 is not None:
+        fields.append("content2=?"); params.append(content2)
+    if content3 is not None:
+        fields.append("content3=?"); params.append(content3)
+    if from_source is not None:
+        fields.append("`from`=?"); params.append(from_source)
+
+    if not fields:
+        return {'code': 400, 'msg': '没有提供要更新的字段', 'data': None}
+
+    params.append(word_id)
+    try:
+        sqlite_execute(
+            f"UPDATE translate_words SET {', '.join(fields)} WHERE id=?",
+            tuple(params)
+        )
+        return {'code': 200, 'msg': 'success', 'data': None}
+    except Exception as e:
+        return {'code': 500, 'msg': f'更新失败: {str(e)}', 'data': None}
 
 
 @router.post('/delete_translate_word')
@@ -180,8 +209,9 @@ async def delete_translate_word(
     """
     删除翻译词汇
     """
-    loop = asyncio.get_running_loop()
-    response = await loop.run_in_executor(executor, delete_translate_word_api, word_id)
-    if response:
-        return response
-    return {'code': 500, 'msg': '删除失败', 'data': None}
+    from core.sqlLiteExec import sqlite_execute
+    try:
+        sqlite_execute("DELETE FROM translate_words WHERE id=?", (word_id,))
+        return {'code': 200, 'msg': 'success', 'data': None}
+    except Exception as e:
+        return {'code': 500, 'msg': f'删除失败: {str(e)}', 'data': None}

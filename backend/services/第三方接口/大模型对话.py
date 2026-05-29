@@ -374,25 +374,27 @@ def aiping_ai_answer(question):
 def changcheng_ai_answer(question):
     """
     调用长城AI进行问答。
-    由于该接口返回的是 Ollama 格式的 NDJSON 流，此处进行同步转换，获取完整回复。
+    接口格式：OpenAI 兼容的 /api/chat，同步调用非流式模式获取完整回复。
     """
-    url = "http://10.68.249.59:33331/api/generate"
-    payload = {"prompt": str(question)}
+    url = "http://10.68.249.59:33331/api/chat"
+    payload = {
+        "model": "CHANGCHENGAPI",
+        "messages": [{"role": "user", "content": str(question)}],
+        "stream": False
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sk-ollama-123456"
+    }
     try:
-        # 使用 stream=True 调用
-        response = requests.post(url, json=payload, stream=True, timeout=120)
+        response = requests.post(url, json=payload, headers=headers, timeout=120, verify=False)
         response.raise_for_status()
 
-        full_content = ""
-        for line in response.iter_lines():
-            if line:
-                data = json.loads(line.decode('utf-8'))
-                full_content += data.get("response", "")
-                if data.get("done"):
-                    break
+        result = response.json()
+        content = result.get("message", {}).get("content", "")
 
-        print(f"长城AI返回: {full_content}")
-        return full_content
+        print(f"长城AI返回: {content}")
+        return content
     except Exception as e:
         print(f"调用长城AI出错: {e}")
         return f"调用长城AI失败: {str(e)}"

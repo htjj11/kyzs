@@ -3,9 +3,9 @@
 export const api_url =  'https://10.68.202.238:8443';
 
 // RAGFlow 服务主机（.env.vuehost 中 RAGFLOW_API_IP = http://192.168.137.130）
-export const ragflow_api_ip =  'http://192.168.137.130';
+export const ragflow_api_ip =  'http://10.68.202.238:8080';
 
-// RAGFlow 对话页完整地址（未配置完整 URL 时，默认基于 ragflow_api_ip 拼接）
+// RAGFlow 对话页完整地址（直接使用 HTTP 原始地址，在新标签页打开）
 const defaultRagflowShareUrl =
   `${ragflow_api_ip.replace(/\/$/, '')}/next-search/share?shared_id=6786357235bf11f1aeed9bfd9c11ebc2&from=search&auth=QKiedFFs9sfN33vrtBWgDLUleec5WxVg&tenantId=2b72a9ca212a11f18ea4fbdc65029751`;
 

@@ -204,7 +204,7 @@ def create_new_dataset(dataset_name: str) -> str:
     }
     data = {
         "name": dataset_name,
-        "embedding_model": "BAAI/bge-large-zh-v1.5@SILICONFLOW",
+        "embedding_model": "CHANGCHENGEMBEDDING@Ollama",
         "chunk_method": "naive",
         "parser_config": {
             "chunk_token_num": 512,
@@ -213,6 +213,7 @@ def create_new_dataset(dataset_name: str) -> str:
     }
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 200:
+        print(response.json())
         return response.json()['data']['id']
     else:
         raise Exception(f"创建 RAGFlow 数据集失败: http status {response.status_code}, \n body: {response.text}")
@@ -302,8 +303,8 @@ def search_from_dataset(
 
 if __name__ == "__main__":
     # test_search_from_dataset()
-    # print(get_datasets())
+    print(get_datasets())
     # print(create_new_dataset("test_dataset"))
     # print(upload_to_ragflow_by_id("test.txt", dataset_id))
-    print(search_from_dataset('非商旅平台行程申请审批单','2fde7d98558e11f1a0325562b53a43da'))
+    # print(search_from_dataset('非商旅平台行程申请审批单','2fde7d98558e11f1a0325562b53a43da'))
 

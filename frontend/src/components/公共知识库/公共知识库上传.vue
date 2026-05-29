@@ -161,7 +161,7 @@ const startUpload = async () => {
                 user_id: getUserIdFromCookie()
             }
 
-            const response = await request.post('/get_knowledge/upload_file', payload)
+            const response = await request.post('/public_knowledgebase/upload_file', payload)
 
             if (response.data && response.data.success) {
                 item.status = 'success'

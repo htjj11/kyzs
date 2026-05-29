@@ -217,10 +217,13 @@ const handleSearch = async () => {
 
 <style scoped>
 .rag-search-container {
-  min-height: calc(100vh - 56px);
+  height: calc(100vh - 56px);
   padding: 16px 20px 24px;
   box-sizing: border-box;
   background: #f4f6f8;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .page-header {
@@ -285,6 +288,9 @@ const handleSearch = async () => {
 
 .result-section {
   margin-top: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .result-loading {
