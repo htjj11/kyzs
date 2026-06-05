@@ -112,7 +112,7 @@ const confirmTransfer = async (selectedNode) => {
   if (!selectedNode) return
   isTransferring.value = true
   try {
-    const response = await api.post('/get_knowledge/transfer_to_public', {
+    const response = await api.post('/personal_knowledgebase/transfer_to_public', {
       user_id: getUserIdFromCookie(),
       knowledge_id: props.knowledgeData.id,
       category_id: selectedNode.id

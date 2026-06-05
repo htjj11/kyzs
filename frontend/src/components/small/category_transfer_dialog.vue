@@ -88,7 +88,7 @@ const handleOpen = async () => {
   selectedTransferNode.value = null
   loadingStructure.value = true
   try {
-    const response = await api.post('/public_knowledgebase/get_structure')
+    const response = await api.post('/public_knowledgebase/get_structure', {})
     if (response.data && response.data.code === 200) {
       categoryTree.value = buildTree(response.data.data || [])
     } else {

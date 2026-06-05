@@ -109,7 +109,7 @@ const getFileName = (path) => {
 const fetchDetail = async () => {
     loading.value = true
     try {
-        const response = await request.post('/get_knowledge/get_public_file_by_id', {
+        const response = await request.post('/public_knowledgebase/get_public_file_by_id', {
             file_id: props.fileId
         })
 
